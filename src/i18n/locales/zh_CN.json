@@ -135,7 +135,8 @@
         "google": "谷歌",
         "bing": "必应",
         "yandex": "Yandex",
-        "local": "本地"
+        "local": "本地",
+        "bg_opacity": "窗口不透明度"
       },
       "recognize": {
         "label": "文字识别",
@@ -156,7 +157,8 @@
         "is_register": "快捷键已被注册",
         "success": "快捷键注册成功",
         "set_hotkey": "按下按键设置快捷键",
-        "voice_anywhere": "Voice Input (Anywhere)"
+        "voice_anywhere": "随处语音",
+        "audio_monitor": "实时口译"
       },
       "service": {
         "label": "服务设置",
@@ -174,15 +176,106 @@
         "view_plugin_list": "查看插件列表",
         "uninstall_success": "插件卸载成功",
         "homepage": "插件主页",
-        "more_services": "更多服务"
+        "more_services": "更多服务",
+        "ai": {
+          "label": "AI",
+          "empty": "尚未配置 AI 服务，请先添加一个。"
+        },
+        "transcription": "语音转写",
+        "audio": {
+          "label": "音频",
+          "title": "Soniox - 实时音频翻译",
+          "api_key_label": "Soniox API Key",
+          "api_key_placeholder": "输入你的 Soniox API Key...",
+          "api_key_hint": "在此获取 API Key：",
+          "info_label": "简介",
+          "info_desc": "Soniox 提供实时语音转文字，并内置翻译。支持麦克风和系统音频。",
+          "saved": "设置已保存",
+          "tts_title": "语音播放（TTS）",
+          "tts_server_url": "TTS 服务器地址",
+          "tts_api_type": "API 类型",
+          "tts_model": "模型",
+          "tts_voice_id": "音色 ID（可选）",
+          "tts_voice_id_placeholder": "留空使用默认音色",
+          "tts_test": "测试连接",
+          "tts_test_ok": "已连接",
+          "tts_test_fail": "无法连接服务器",
+          "tts_hint": "启用播放前请先启动 TTS 服务器。VieNeu：运行 `vieneu-stream`（端口 8001）。OpenAI 兼容：任何支持 POST /v1/audio/speech 的服务器。Google：无需服务器。",
+          "tts_google_lang": "语言代码（如 vi、en、ja）",
+          "tts_google_speed": "语速（0.5 – 2.0）",
+          "tts_active_service": "当前 TTS 服务",
+          "tts_active_service_hint": "在“语音合成”标签页中配置各个 TTS 服务。",
+          "tts_playback_rate": "基础播放速度",
+          "tts_playback_rate_hint": "播放队列积压时会自动加速（基础值的 ×1.5 / ×2.0 / ×2.5）。",
+          "tts_edge_builtin": "内置",
+          "tts_edge_builtin_hint": "无需服务器，直接在 Transkit 内运行",
+          "tts_edge_voice": "音色",
+          "tts_edge_rate": "语速（如 +0%、+20%、-10%）",
+          "tts_edge_pitch": "音调（如 +0Hz、+5Hz、-5Hz）",
+          "soniox_advanced_title": "Soniox 高级设置",
+          "soniox_endpoint_delay": "断句延迟（毫秒）",
+          "soniox_endpoint_delay_hint": "Soniox 在确定一段语音结束前等待后续音频的时长。越低响应越快，越高句子越准确。",
+          "soniox_batch_interval": "音频发送间隔（毫秒）",
+          "soniox_batch_interval_hint": "向 Soniox 发送音频块的频率。越低延迟越小，越高网络请求越少。",
+          "soniox_speaker_diarization": "说话人分离",
+          "soniox_speaker_diarization_hint": "识别并标注不同的说话人。关闭可降低延迟。",
+          "stt_title": "语音转写服务",
+          "stt_active_service": "当前服务",
+          "stt_active_service_hint": "在“服务设置 → 语音转写”标签页中配置服务。",
+          "autosave_title": "转写稿自动保存",
+          "autosave_enable_label": "默认开启自动保存",
+          "autosave_enable_hint": "开启后，口译窗口每次会话都会自动把转写稿保存为 Markdown 文件（~/Documents/TransKit/）。你也可以随时在口译窗口中切换。",
+          "ai_suggestion_title": "AI 建议",
+          "ai_suggestion_service": "AI 服务",
+          "ai_suggestion_service_placeholder": "选择 AI 服务",
+          "ai_suggestion_no_service": "尚未配置 AI 服务。请在“设置 > 服务设置 > AI”中添加。",
+          "ai_suggestion_response_lang": "回复语言",
+          "ai_suggestion_lang_both": "两种都用（源语言 + 目标语言）",
+          "ai_suggestion_lang_source": "仅源语言",
+          "ai_suggestion_lang_target": "仅目标语言",
+          "ai_suggestion_response_lang_hint": "“调研”和“建议回答”部分使用的语言。",
+          "ai_suggestion_context_lines": "上下文行数",
+          "ai_suggestion_context_lines_hint": "发送给 AI 作为上下文的历史对话行数。",
+          "ai_suggestion_font_size": "建议字体大小"
+        }
       },
       "history": {
         "label": "历史记录",
         "title": "历史记录"
       },
       "account": {
-        "label": "Account",
-        "title": "Account"
+        "label": "账号",
+        "title": "账号",
+        "profile_title": "个人资料",
+        "not_signed_in": "未登录",
+        "sign_in_description": "登录后可在多台设备间同步个人资料和数据。",
+        "plan_section_title": "Transkit Cloud",
+        "plan_badge_trial": "免费试用",
+        "plan_badge_starter": "入门版",
+        "plan_badge_pro": "专业版",
+        "plan_badge_team": "团队版",
+        "stt_label": "语音转文字",
+        "tts_label": "文字转语音",
+        "ai_label": "AI 建议",
+        "coming_soon": "即将推出",
+        "usage_minutes": "{{used}} / {{limit}} 分钟",
+        "unlimited": "不限量",
+        "quota_low": "额度即将用完",
+        "quota_full": "额度已用完",
+        "upgrade_cta_trial": "升级以获得更多 TTS、AI 和翻译额度",
+        "upgrade_cta_starter": "升级到专业版，不限量使用",
+        "view_plans": "查看套餐 →",
+        "unit_min": "分钟",
+        "unit_chars": "字符",
+        "unit_requests": "次请求",
+        "translate_label": "翻译",
+        "dictation_label": "听写",
+        "powered_by_note": "AI 与翻译：Gemini 2.5 Flash · TTS：ElevenLabs",
+        "buy_more": "购买更多",
+        "addon_remaining": "附加额度剩余",
+        "subscription_ended": "订阅已结束，你的套餐稍后会更新。",
+        "manage_account": "管理账号",
+        "session_expired": "登录已过期，请重新登录。"
       },
       "backup": {
         "label": "备份设置",
@@ -221,27 +314,171 @@
         "qq_channel": "QQ 频道",
         "qq_group": "QQ 群",
         "telegram": "Telegram",
-        "discussion": "Github 讨论"
+        "discussion": "Github 讨论",
+        "reset_defaults": "重置",
+        "reset_title": "恢复默认设置",
+        "reset_desc": "所有设置都将被重置。你可以选择是否保留 API Key 和服务凭据。",
+        "reset_restart_note": "重置后应用会自动重启。",
+        "reset_keep_keys": "重置，但保留 API Key",
+        "reset_full": "全部重置"
       },
       "voice_input": {
-        "label": "Voice Input",
-        "title": "Voice Input Settings",
-        "stt_section": "Speech Recognition",
-        "stt_service": "STT Service",
-        "inherit_monitor": "Same as Audio Monitor",
-        "language": "Language",
-        "auto_detect": "Same as Audio Monitor",
-        "behaviour_section": "Behaviour",
-        "inject_mode": "Text Injection Mode",
-        "inject_mode_desc": "Replace: clears existing text. Append: adds after current text.",
-        "inject_mode_replace": "Replace",
-        "inject_mode_append": "Append",
-        "autostart": "Auto-start recording on hotkey",
-        "autostart_desc": "Immediately begin recording when the hotkey is pressed.",
-        "appearance_section": "Button Appearance",
-        "fab_size": "Button Size",
+        "label": "随处语音",
+        "title": "随处语音设置",
+        "stt_section": "语音识别",
+        "stt_service": "语音识别服务",
+        "inherit_monitor": "与实时口译相同",
+        "language": "语言",
+        "auto_detect": "与实时口译相同",
+        "behaviour_section": "行为",
+        "inject_mode": "文字输入方式",
+        "inject_mode_desc": "替换：清除已有文字。追加：添加在当前文字之后。",
+        "inject_mode_replace": "替换",
+        "inject_mode_append": "追加",
+        "autostart": "按下快捷键时自动开始录音",
+        "autostart_desc": "按下快捷键后立即开始录音。",
+        "appearance_section": "按钮外观",
+        "fab_size": "按钮大小",
         "fav_targets": "常用目标语言（托盘）",
-        "fav_targets_desc": "在系统托盘中显示的语言，用于快速切换目标语言。在此配置后，通过托盘快速切换。"
+        "fav_targets_desc": "在系统托盘中显示的语言，用于快速切换目标语言。在此配置后，通过托盘快速切换。",
+        "target_language": "目标语言（翻译）",
+        "no_translate": "不翻译（听写）",
+        "translate_service": "翻译服务（备用）",
+        "translate_service_desc": "当语音识别服务本身不支持翻译时使用（如离线 ONNX / MLX）。Soniox 等云端识别自带翻译，会忽略此项。",
+        "translate_service_none": "无",
+        "action": "停止后的操作",
+        "action_desc": "剪贴板：只复制文字。粘贴：切回上一个应用并自动粘贴。",
+        "action_clipboard": "剪贴板",
+        "action_paste": "粘贴到上一个应用",
+        "sfx_enabled": "启用开始/停止提示音",
+        "sfx_enabled_desc": "开始或停止录音时播放提示音。",
+        "always_visible": "始终显示",
+        "always_visible_desc": "麦克风按钮始终显示在屏幕上，无需快捷键。",
+        "show_context_menu": "在图标上显示右键菜单",
+        "show_context_menu_desc": "右键单击随处语音按钮，可快速切换服务和操作。",
+        "prefer_async_api": "优先使用异步语音识别 API",
+        "prefer_async_api_desc": "推荐用于听写。随处语音会持续录音直到你停止，然后把完整音频发给支持的服务；不支持时回退到实时识别。",
+        "polish_section": "转写润色（AI）",
+        "polish_enabled": "启用润色",
+        "polish_enabled_desc": "在输入或粘贴前，先用 AI 服务处理转写文字。",
+        "polish_level": "润色程度",
+        "polish_level_desc": "轻度：只修正错误。中度：提升流畅度。重度：重组结构并排版。",
+        "polish_prompt": "系统提示词",
+        "reset_prompt": "恢复默认",
+        "polish_service": "AI 服务",
+        "polish_service_desc": "用于润色的 AI 服务。请在“设置 → AI 服务”中配置。",
+        "idle_button_color": "待机按钮颜色",
+        "idle_button_color_desc": "选择随处语音按钮待机时的颜色。",
+        "reset_idle_button_color": "重置"
+      },
+      "audio_translate": {
+        "label": "实时口译",
+        "title": "实时口译设置"
+      },
+      "profile": {
+        "label": "个人资料",
+        "title": "用户资料",
+        "hint": "个人资料能帮助 AI 建议生成更相关、更个性化的回答。",
+        "name": "姓名",
+        "name_placeholder": "你的名字",
+        "role": "职位 / 头衔",
+        "role_placeholder": "如：软件工程师、产品经理",
+        "company": "公司 / 组织",
+        "company_placeholder": "如：Acme 公司",
+        "experience_level": "经验水平",
+        "experience_placeholder": "选择水平",
+        "expertise": "专业领域",
+        "expertise_placeholder": "如：金融科技、AI、医疗，按回车或逗号分隔",
+        "expertise_hint": "这些领域能帮助 AI 根据你的背景调整建议。",
+        "notes": "简介 / 备注",
+        "notes_placeholder": "如：我参加英语会议，但希望用中文回答",
+        "preview_label": "资料预览"
+      },
+      "local_sidecar": {
+        "label": "本地模型",
+        "title": "本地模型",
+        "subtitle": "在本机运行 AI 模型，无需联网",
+        "setup": {
+          "title": "运行环境",
+          "not_installed": "未安装",
+          "install_button": "安装本地环境",
+          "installing": "安装中…",
+          "ready": "环境已就绪",
+          "requirements": "需要 macOS Apple Silicon · 约 3 GB 磁盘空间 · Python 3.10+（brew install python3）",
+          "installed_at": "安装位置：$t(path)"
+        },
+        "startup": {
+          "title": "启动",
+          "enable": "启用本地模型",
+          "enable_hint": "Transkit 启动时同时启动推理服务",
+          "port": "端口",
+          "status_running": "运行中",
+          "status_stopped": "已停止",
+          "start": "启动",
+          "stop": "停止"
+        },
+        "llm": {
+          "section": "语言模型（翻译 · AI）",
+          "model": "模型",
+          "temperature": "温度",
+          "temperature_hint": "越低越稳定，越高越有创意",
+          "context_tokens": "最大输出 token 数"
+        },
+        "asr": {
+          "section": "语音识别（STT）",
+          "model": "Whisper 模型",
+          "language": "语言",
+          "chunk_seconds": "分段长度"
+        },
+        "tts": {
+          "section": "语音合成（TTS）",
+          "engine": "引擎",
+          "voice": "音色",
+          "speed": "语速"
+        },
+        "engine_tab": {
+          "mlx": "MLX",
+          "onnx": "ONNX"
+        },
+        "offline_stt_translate": {
+          "section": "翻译转写结果",
+          "service": "翻译服务",
+          "service_hint": "识别出语音后，把转写文字翻译成目标语言。目标语言使用实时口译 / 随处语音中的设置。",
+          "none": "不翻译"
+        }
+      },
+      "onnx_stt": {
+        "engine": {
+          "ready": "ONNX 引擎已安装",
+          "not_installed": "ONNX 引擎未安装",
+          "platform_sidecar": "使用共享的本地模型虚拟环境",
+          "install": "安装引擎"
+        },
+        "model": {
+          "active": "当前模型",
+          "active_hint": "已下载模型的 HuggingFace 仓库 ID",
+          "download_title": "下载模型",
+          "download_hint": "输入 Zipformer RNNT ONNX 模型的 HuggingFace 仓库 ID。",
+          "download_btn": "下载",
+          "downloaded": "已下载的模型",
+          "incomplete": "（不完整）",
+          "downloaded_badge": "已下载",
+          "select_hint": "从已下载的模型中选择",
+          "active_readonly": "当前模型（在“本地模型”设置中管理）",
+          "no_model": "未选择模型，请在“设置 → 本地模型”中配置"
+        },
+        "server": {
+          "title": "ONNX 服务",
+          "running": "运行于端口 {{port}}",
+          "stopped": "服务已停止",
+          "no_model_warning": "还没有下载模型。启动服务前，请先在下方“模型”部分下载一个模型。"
+        },
+        "startup": {
+          "enable": "打开 Transkit 时启动",
+          "enable_hint": "如果已有下载好的模型，Transkit 启动时自动启动 ONNX 服务。"
+        },
+        "manage_in_settings": "在“设置 → 本地模型”中管理引擎和模型",
+        "usage_hint": "要使用 ONNX 语音识别，请到“设置 → 服务设置 → 语音转写”添加一个“离线语音识别（ONNX）”服务实例。"
       }
     },
     "updater": {
@@ -255,7 +492,18 @@
       "installed": "安装完成，重启应用生效",
       "install_complete": "安装完成",
       "restart_now": "立即重启",
-      "restart_later": "稍后"
+      "restart_later": "稍后",
+      "update_available": "有可用更新",
+      "version_available": "Transkit 有新版本了！",
+      "version_info": "Transkit {{newVersion}} 已发布，你当前的版本是 {{currentVersion}}。",
+      "download_prompt": "要现在下载吗？",
+      "up_to_date": "Transkit 已是最新版本！",
+      "current_version": "你的 Transkit {{currentVersion}} 已是最新版本。",
+      "skip_version": "跳过此版本",
+      "remind_later": "稍后提醒",
+      "auto_update": "以后自动下载并安装更新",
+      "close": "关闭",
+      "view_on_github": "在 GitHub 上查看完整更新说明 →"
     },
     "services": {
       "help": "配置指南",
@@ -408,6 +656,30 @@
         "caiyun": {
           "title": "彩云小译",
           "token": "Token"
+        },
+        "transkit_cloud_translate": {
+          "title": "Transkit Cloud",
+          "sign_in_desc": "登录即可使用 Transkit Cloud 翻译，无需 API Key。",
+          "continue_google": "使用 Google 登录",
+          "continue_github": "使用 GitHub 登录",
+          "sign_out": "退出登录",
+          "translate_usage": "本周期翻译用量",
+          "requests_label": "次请求",
+          "quota_reached": "额度已用完。",
+          "upgrade_plan": "升级套餐",
+          "loading_usage": "正在加载用量数据…",
+          "powered_by_note": "由 Gemini 2.5 Flash 提供支持，模型可能会为提升质量而更新。",
+          "not_available": "当前版本不支持 Transkit Cloud。"
+        },
+        "local_sidecar": {
+          "title": "本地模型",
+          "hint": "使用本地模型的 LLM 进行翻译。请在“设置 → 本地模型”中配置模型。"
+        },
+        "google_cloud_translate": {
+          "title": "Google Cloud 翻译",
+          "api_key": "API Key",
+          "api_key_hint": "在此获取 API Key：",
+          "api_key_hint_enable": "请先启用 Cloud Translation API。"
         }
       },
       "recognize": {
@@ -487,6 +759,68 @@
         "lingva_tts": {
           "title": "Lingva",
           "request_path": "请求地址"
+        },
+        "google_tts": {
+          "title": "Google TTS",
+          "lang": "语言代码（如 vi、en、ja）",
+          "speed": "语速（0.5 – 2.0）"
+        },
+        "edge_tts": {
+          "title": "Microsoft Edge TTS",
+          "builtin": "内置",
+          "builtin_hint": "无需服务器，直接在 Transkit 内运行",
+          "voice": "音色",
+          "rate": "语速（如 +0%、+20%、-10%）",
+          "pitch": "音调（如 +0Hz、+5Hz、-5Hz）"
+        },
+        "elevenlabs_tts": {
+          "title": "ElevenLabs",
+          "api_key": "API Key",
+          "voice_id": "音色 ID",
+          "model": "模型",
+          "mode": "连接方式",
+          "mode_wss_hint": "低延迟，适用于 v2 模型",
+          "mode_http_hint": "兼容模式，适用于 v3 模型"
+        },
+        "vieneu_tts": {
+          "title": "VieNeu TTS",
+          "server_url": "服务器地址",
+          "voice_id": "音色 ID",
+          "model": "模型"
+        },
+        "openai_tts": {
+          "title": "OpenAI 兼容 TTS",
+          "server_url": "服务器地址",
+          "api_key": "API Key（可选）",
+          "voice": "音色",
+          "model": "模型"
+        },
+        "transkit_cloud_tts": {
+          "title": "Transkit Cloud",
+          "sign_in_desc": "登录即可使用 Transkit Cloud TTS，无需 API Key。你的套餐包含免费试用字符额度。",
+          "continue_google": "使用 Google 登录",
+          "continue_github": "使用 GitHub 登录",
+          "sign_out": "退出登录",
+          "voice": "音色",
+          "tts_usage": "本周期 TTS 用量",
+          "chars_label": "字符",
+          "quota_reached": "额度已用完。",
+          "upgrade_plan": "升级套餐",
+          "loading_usage": "正在加载用量数据…",
+          "auto_provider_note": "当前的 TTS 服务商由 Transkit 配置，可能会为提供最佳质量而调整。",
+          "not_available": "当前版本不支持 Transkit Cloud。"
+        },
+        "google_cloud_tts": {
+          "title": "Google Cloud TTS（Chirp3-HD）",
+          "api_key": "API Key",
+          "voice": "音色",
+          "speaking_rate": "语速（0.25 – 2.0）",
+          "pitch": "音调（-20 – 20）",
+          "api_key_hint": "在此获取 API Key：",
+          "api_key_hint_enable": "启用 Cloud Text-to-Speech API，然后创建 API Key。"
+        },
+        "local_sidecar_tts": {
+          "title": "离线语音合成（MLX）"
         }
       },
       "collection": {
@@ -498,6 +832,152 @@
           "title": "欧路词典",
           "name": "生词本名称",
           "token": "Token"
+        }
+      },
+      "ai": {
+        "openai_compat_ai": {
+          "title": "OpenAI 兼容 AI",
+          "request_path": "API 地址",
+          "api_key": "API Key",
+          "model": "模型",
+          "system_prompt": "系统提示词",
+          "system_prompt_hint": "用于引导 AI 的行为，例如总结、提供翻译上下文等。"
+        },
+        "openai_ai": {
+          "title": "OpenAI"
+        },
+        "groq_ai": {
+          "title": "Groq"
+        },
+        "ollama_ai": {
+          "title": "Ollama（本地 LLaMA）"
+        },
+        "gemini_ai": {
+          "title": "Google Gemini"
+        },
+        "transkit_cloud_ai": {
+          "title": "Transkit Cloud AI",
+          "sign_in_desc": "登录即可使用 Transkit Cloud AI，无需 API Key。你的套餐包含免费的 AI 建议请求次数。",
+          "continue_google": "使用 Google 登录",
+          "continue_github": "使用 GitHub 登录",
+          "sign_out": "退出登录",
+          "ai_usage": "本周期 AI 用量",
+          "requests_label": "次请求",
+          "quota_reached": "额度已用完。",
+          "upgrade_plan": "升级套餐",
+          "loading_usage": "正在加载用量数据…",
+          "powered_by_note": "由 Gemini 2.5 Flash 提供支持，模型可能会为提升质量而更新。",
+          "not_available": "当前版本不支持 Transkit Cloud。"
+        },
+        "local_sidecar_ai": {
+          "title": "离线 AI（MLX）",
+          "hint": "使用本地模型的 LLM 进行 AI 分析。请在“设置 → 本地模型”中配置模型。"
+        }
+      },
+      "transcription": {
+        "custom_stt": {
+          "title": "自定义语音识别服务",
+          "ws_url": "WebSocket 地址",
+          "ws_url_hint": "WebSocket 端点地址（如 wss://your-provider.com/transcribe）",
+          "api_key": "API Key",
+          "api_key_hint": "会作为 api_key 放在连接配置消息中发送。",
+          "endpoint_delay": "断句延迟（毫秒）",
+          "endpoint_delay_hint": "服务在确定一段语音结束前等待后续音频的时长。",
+          "batch_interval": "音频发送间隔（毫秒）",
+          "batch_interval_hint": "发送音频块的频率。越低延迟越小，越高网络请求越少。",
+          "speaker_diarization": "说话人分离",
+          "speaker_diarization_hint": "识别并标注不同的说话人。关闭可降低延迟。"
+        },
+        "soniox_stt": {
+          "title": "Soniox",
+          "api_key": "API Key",
+          "api_key_hint": "在此获取 API Key：",
+          "endpoint_delay": "断句延迟（毫秒）",
+          "endpoint_delay_hint": "Soniox 在确定一段语音结束前等待后续音频的时长。越低响应越快，越高句子越准确。",
+          "batch_interval": "音频发送间隔（毫秒）",
+          "batch_interval_hint": "向 Soniox 发送音频块的频率。越低延迟越小，越高网络请求越少。",
+          "speaker_diarization": "说话人分离",
+          "speaker_diarization_hint": "识别并标注不同的说话人。关闭可降低延迟。"
+        },
+        "assemblyai_stt": {
+          "title": "AssemblyAI",
+          "api_key": "API Key",
+          "api_key_hint": "在此获取 API Key：",
+          "no_translation_note": "注意：AssemblyAI 实时 API 不支持内置翻译，转写文字会同时显示为原文和译文。"
+        },
+        "openai_whisper_stt": {
+          "title": "OpenAI Whisper",
+          "api_key": "API Key",
+          "server_url": "服务器地址",
+          "model": "模型",
+          "chunk_interval": "分段间隔（秒）",
+          "chunk_interval_hint": "音频先缓存，每 N 秒发送给 Whisper 一次。越低响应越快，越高越准确。",
+          "batch_note": "Whisper 是批处理 API，音频分段发送，说话和出字之间会有延迟。"
+        },
+        "gladia_stt": {
+          "title": "Gladia",
+          "api_key": "API Key",
+          "api_key_hint": "在此获取 API Key：",
+          "endpointing": "断句静音时长（秒）",
+          "endpointing_hint": "静音持续多久视为一句话结束。越低响应越快，越高句子越完整。实时字幕推荐 0.1 秒。",
+          "speech_threshold": "语音阈值",
+          "speech_threshold_hint": "判定为语音的最低置信度（0–1）。越低越灵敏，越高越不易误收噪音。",
+          "batch_interval": "音频发送间隔（毫秒）",
+          "batch_interval_hint": "向 Gladia 发送音频块的频率。越低延迟越小，越高网络请求越少。"
+        },
+        "deepgram_stt": {
+          "title": "Deepgram",
+          "api_key": "Deepgram API Key",
+          "api_key_hint": "在此获取 API Key：",
+          "google_api_key": "Google Cloud 翻译 API Key",
+          "google_api_key_hint": "启用 Cloud Translation API 并在此创建 Key：",
+          "google_api_key_optional": "留空则不翻译（只显示转写文字）。",
+          "model": "模型",
+          "endpointing": "断句静音时长（毫秒）",
+          "endpointing_hint": "静音持续多久（毫秒）视为一句话结束。越低分句越快，越高句子越完整。推荐 100 毫秒。",
+          "batch_interval": "音频发送间隔（毫秒）",
+          "batch_interval_hint": "向 Deepgram 发送音频块的频率。越低延迟越小，越高网络请求越少。",
+          "provisional_timeout": "静音提交超时（毫秒）",
+          "provisional_timeout_hint": "如果在此时长内没有新的转写结果，待定文字会自动提交，避免说话结束时文字卡住。",
+          "speaker_diarization": "说话人分离",
+          "speaker_diarization_hint": "识别并标注不同的说话人。关闭可降低延迟。"
+        },
+        "transkit_cloud_stt": {
+          "title": "Transkit Cloud 语音识别",
+          "sign_in_desc": "登录即可使用 Transkit Cloud 语音识别，无需 API Key。你的套餐包含免费试用分钟数，并会自动使用当前最佳的服务商。",
+          "continue_google": "使用 Google 登录",
+          "continue_github": "使用 GitHub 登录",
+          "sign_out": "退出登录",
+          "stt_usage": "本周期语音识别用量",
+          "quota_reached": "额度已用完。",
+          "upgrade_plan": "升级套餐",
+          "quota_reached_hint": "或在其他语音识别服务中添加你自己的 API Key。",
+          "auto_provider_note": "当前的语音识别服务商由 Transkit 配置，可能随时调整以提供最佳质量。你无需管理任何 API Key。",
+          "min_label": "分钟",
+          "loading_usage": "正在加载用量数据…",
+          "not_available": "当前版本不支持 Transkit Cloud。",
+          "advanced_settings": "高级设置",
+          "endpointing": "断句静音时长",
+          "endpointing_hint": "静音持续多久视为一句话结束。越低响应越快，越高句子越完整。仅在当前服务商支持时生效。",
+          "speech_threshold": "语音阈值",
+          "speech_threshold_hint": "检测到语音活动的最低置信度。越高误触发越少。仅在当前服务商支持时生效。"
+        },
+        "transkit_cloud_dictation": {
+          "title": "Transkit Cloud 听写",
+          "sign_in_desc": "登录即可使用云端听写，专为短时间按住说话优化（随处语音、旁白按住说话）。无需 API Key。",
+          "continue_google": "使用 Google 登录",
+          "continue_github": "使用 GitHub 登录",
+          "sign_out": "退出登录",
+          "dictation_usage": "本周期听写用量",
+          "quota_reached": "额度已用完。",
+          "upgrade_plan": "升级套餐",
+          "loading_usage": "正在加载用量数据…"
+        },
+        "local_sidecar_stt": {
+          "title": "离线语音识别（MLX）"
+        },
+        "onnx_stt": {
+          "title": "离线语音识别（ONNX）"
         }
       }
     },
@@ -512,7 +992,8 @@
       "translate_back": "翻译回原文",
       "loading": "翻译中...",
       "show_other_translations": "查看其他翻译",
-      "hide_other_translations": "隐藏其他翻译"
+      "hide_other_translations": "隐藏其他翻译",
+      "input_placeholder": "输入要翻译的文字..."
     },
     "recognize": {
       "recognize": "重新识别",
@@ -674,6 +1155,159 @@
         "custom-action-changed": "此自定义操作已被修改。请从更新后的列表重新运行。",
         "custom-output-unsupported": "此自定义操作使用了不支持的输出方式。"
       }
+    },
+    "voice_anywhere": {
+      "errors": {
+        "no_speech_detected": "未检测到语音。",
+        "no_speech_detected_with_request_id": "未检测到语音。request_id={{requestId}}"
+      }
+    },
+    "monitor": {
+      "source_system": "系统音频",
+      "source_system_unavailable": "系统音频（仅限 macOS）",
+      "source_mic": "麦克风",
+      "start": "开始",
+      "stop": "停止",
+      "open_audio_config": "音频设置",
+      "pin": "置顶窗口",
+      "unpin": "取消置顶",
+      "minimize": "最小化",
+      "close": "隐藏窗口",
+      "placeholder": "点击“开始”开始收听...",
+      "placeholder_context_hint": "对于专业话题，点击设置（⚙）按钮配置翻译上下文，可提高准确度。",
+      "listening": "正在收听...",
+      "no_api_key": "请在“设置 › {{service}} › {{transcription}}”中填写 API Key",
+      "status_connecting": "连接中...",
+      "status_connected": "收听中",
+      "status_disconnected": "就绪",
+      "status_error": "错误",
+      "font_larger": "增大字号",
+      "font_smaller": "减小字号",
+      "sub_mode": "字幕模式",
+      "exit_sub_mode": "退出字幕模式",
+      "tts_enable": "开启语音播放",
+      "tts_disable": "关闭语音播放",
+      "tts_volume": "音量",
+      "context_panel": "上下文",
+      "ctx_domain_placeholder": "话题背景（如 Web3 大会、医学讲座...）",
+      "ctx_terms_placeholder": "关键术语，用逗号分隔（如 TransKit, Soniox, API）",
+      "ctx_preset_meeting": "会议",
+      "ctx_preset_movie_cn": "中文电影",
+      "ctx_preset_movie_en": "英文电影",
+      "ctx_preset_tech": "科技",
+      "ctx_preset_medical": "医疗",
+      "ctx_preset_sport": "体育",
+      "show_original": "显示原文",
+      "hide_original": "隐藏原文",
+      "transparent_on": "开启透明背景",
+      "transparent_off": "关闭透明背景",
+      "opacity": "不透明度",
+      "ctx_general_label": "通用上下文",
+      "ctx_general_key_placeholder": "键（如 domain）",
+      "ctx_general_value_placeholder": "值（如 Healthcare）",
+      "ctx_general_add": "添加字段",
+      "ctx_text_label": "背景文本",
+      "ctx_text_placeholder": "本次会话的背景说明或参考文本...",
+      "ctx_terms_label": "术语",
+      "ctx_terms_new_placeholder": "添加术语...",
+      "ctx_translation_terms_label": "翻译术语",
+      "ctx_translation_src_placeholder": "原文",
+      "ctx_translation_tgt_placeholder": "译文",
+      "ctx_translation_add": "添加术语对",
+      "ctx_presets_label": "预设",
+      "ctx_preset_save": "保存为预设",
+      "ctx_preset_name_placeholder": "预设名称...",
+      "ctx_preset_confirm_save": "保存",
+      "ctx_preset_delete": "删除预设",
+      "ctx_preset_builtin": "（内置）",
+      "ctx_ai_label": "AI 生成",
+      "ctx_ai_placeholder": "描述话题（如关于糖尿病的医疗咨询...）",
+      "ctx_ai_generate": "生成",
+      "ctx_ai_generating": "生成中...",
+      "ctx_ai_no_service": "尚未配置 AI 服务。请在“设置 > 服务设置 > AI”中添加。",
+      "ctx_ai_error": "AI 生成失败",
+      "ctx_ai_success": "上下文已生成",
+      "ctx_char_limit_warning": "上下文接近 10,000 字符上限",
+      "autosave_label": "自动保存：开",
+      "autosave_on": "自动保存已开启，点击关闭",
+      "autosave_off": "自动保存已关闭，点击开启",
+      "autosave_saving": "保存中...",
+      "autosave_saved": "转写稿已保存",
+      "autosave_error": "保存出错",
+      "autosave_clear_blocked": "开启自动保存时，录制过程中无法清空。请先停止以保存文件。",
+      "autosave_toggle": "切换自动保存到文件",
+      "autosave_disabled_warning": "自动保存：关",
+      "autosave_open_file": "打开已保存的文件",
+      "autosave_open_folder": "打开转写稿文件夹",
+      "export_snapshot": "导出转写稿",
+      "ai_suggestion_hint": "为这一行获取 AI 建议",
+      "ai_suggestion_dismiss": "关闭 AI 建议",
+      "ai_suggestion_regenerate": "重新生成建议",
+      "ai_suggestion_loading": "思考中...",
+      "ai_suggestion_error": "AI 建议生成失败，请检查 AI 服务设置。",
+      "ai_suggestion_no_service": "尚未配置用于建议的 AI 服务。请前往“设置 > 实时口译”。",
+      "speaker_me": "我",
+      "narration_ptt_requires_fixed_source": "按住说话的反向模式需要固定的源语言（不能是自动检测）。例如：日语 → 越南语。",
+      "narration_ptt_active": "启用按住说话",
+      "narration_ptt_active_hint": "显示“按住说话”按钮",
+      "narration_ptt_cost_warning": "启用按住说话后，按住期间可能额外建立一条云端语音识别连接，可能重复消耗 token 或分钟数。",
+      "narration_ptt_section": "按住说话设置",
+      "narration_ptt_label": "按住说话",
+      "narration_beta": "Beta",
+      "narration_ptt_on": "开",
+      "narration_ptt_off": "关",
+      "ai_suggestion_research": "调研",
+      "ai_suggestion_answer": "建议回答",
+      "scroll_to_latest": "最新",
+      "sort_newest_bottom": "最新的在底部",
+      "sort_newest_top": "最新的在顶部",
+      "ai_suggestion_source_lang": "源语言",
+      "ai_suggestion_target_lang": "目标语言",
+      "bookmark_add": "收藏这一行",
+      "bookmark_remove": "取消收藏",
+      "tts_replay": "重新播放",
+      "quota_exceeded_title": "Transkit Cloud 额度已用完（已用 {{used}}/{{limit}} 分钟）。",
+      "quota_exceeded_title_short": "Transkit Cloud 额度已用完。",
+      "quota_action_upgrade": "升级套餐",
+      "quota_action_byok": "或使用自己的 API Key：设置 › {{service}} › {{transcription}}",
+      "auth_lock_conflict_title": "认证冲突，请重试。",
+      "auth_lock_conflict_hint": "多个请求同时争用认证令牌。点击“开始”重试。",
+      "cloud_session_ending_soon": "2 分钟后结束",
+      "cloud_session_last_minute": "最后一分钟！",
+      "cloud_session_expired": "会话时长已到，已断开连接",
+      "ai_panel": "AI 助手",
+      "ai_panel_subtitle": "设置",
+      "ai_panel_provider": "服务",
+      "ai_panel_mode": "模式",
+      "ai_panel_context": "上下文",
+      "ai_panel_reply_lang": "回复语言",
+      "ai_panel_lang_both": "两种语言",
+      "ai_panel_lang_source": "源语言",
+      "ai_panel_lang_target": "目标语言",
+      "ci_mode_suggest_answer": "建议回答",
+      "ci_mode_quick_insight": "快速洞察",
+      "ci_mode_summarize": "总结",
+      "ci_mode_follow_up": "追问",
+      "ci_last": "最近",
+      "ci_messages": "条消息",
+      "ci_key_point": "要点",
+      "ci_next_step": "下一步",
+      "ci_questions": "可以提的问题",
+      "ci_summary_points": "总结",
+      "ci_hint": "点击任意一行的 ✨ 运行 AI 分析",
+      "narration_title": "旁白",
+      "narration_virtual_mic_aria": "虚拟麦克风设备",
+      "narration_test_tone_title": "向虚拟设备发送 440 Hz 测试音",
+      "narration_test_testing": "测试中…",
+      "narration_test_ok": "正常 ✓",
+      "narration_test_failed": "失败",
+      "narration_test": "测试",
+      "narration_checklist_item1": "① Zoom 麦克风 → {{device}}",
+      "narration_checklist_item2": "② 在 Zoom 中静音你的真实麦克风（参会者听到的是 {{device}}，而不是你的真实麦克风）",
+      "narration_checklist_item3": "③ 按住“按住说话”进行旁白",
+      "narration_win_install_hint": "使用旁白需要安装 VB-Cable（免费）：",
+      "narration_win_install_link": "下载 VB-Cable →",
+      "narration_win_zoom_hint": "安装并重启后，在 Zoom/Teams 中选择“CABLE Output”作为麦克风。"
     }
   }
 }
