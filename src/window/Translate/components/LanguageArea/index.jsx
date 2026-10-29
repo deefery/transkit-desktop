@@ -7,6 +7,7 @@ import { atom, useAtom, useAtomValue } from 'jotai';
 import { languageList } from '../../../../utils/language';
 import { detectLanguageAtom } from '../SourceArea';
 import { useConfig } from '../../../../hooks';
+import { swapLanguage } from './swapLanguage';
 
 export const sourceLanguageAtom = atom();
 export const targetLanguageAtom = atom();
@@ -77,25 +78,15 @@ export default function LanguageArea() {
                         variant='light'
                         className='h-[26px] w-[26px] min-w-0 text-[16px]'
                         onPress={async () => {
-                            if (sourceLanguage !== 'auto') {
-                                const oldSourceLanguage = sourceLanguage;
-                                setSourceLanguage(targetLanguage);
-                                setTargetLanguage(oldSourceLanguage);
-                            } else {
-                                if (detectLanguage !== '') {
-                                    if (targetLanguage === translateTargetLanguage) {
-                                        setTargetLanguage(detectLanguage);
-                                    } else {
-                                        setTargetLanguage(translateTargetLanguage);
-                                    }
-                                } else {
-                                    if (targetLanguage === translateSecondLanguage) {
-                                        setTargetLanguage(translateTargetLanguage);
-                                    } else {
-                                        setTargetLanguage(secondLanguage);
-                                    }
-                                }
-                            }
+                            const next = swapLanguage({
+                                sourceLanguage,
+                                targetLanguage,
+                                detectLanguage,
+                                translateTargetLanguage,
+                                translateSecondLanguage,
+                            });
+                            setSourceLanguage(next.sourceLanguage);
+                            setTargetLanguage(next.targetLanguage);
                         }}
                     >
                         <BiTransferAlt />

@@ -19,6 +19,7 @@ import { useConfig, useSyncAtom, useVoice, useToastStyle } from '../../../../hoo
 import { invoke_plugin } from '../../../../utils/invoke_plugin';
 import * as recognizeServices from '../../../../services/recognize';
 import * as builtinTtsServices from '../../../../services/tts';
+import { resolveActiveTtsInstanceKey, synthesizeSpeech } from '../../../../utils/tts_service';
 import detect from '../../../../utils/lang_detect';
 import { store } from '../../../../utils/store';
 import { info } from 'tauri-plugin-log-api';
@@ -49,6 +50,7 @@ export default function SourceArea(props) {
     const [recognizeLanguage] = useConfig('recognize_language', 'auto');
     const [recognizeServiceList] = useConfig('recognize_service_list', ['system', 'tesseract']);
     const [ttsServiceList] = useConfig('tts_service_list', ['transkit_cloud_tts', 'google_tts', 'edge_tts']);
+    const [ttsActiveService] = useConfig('tts_active_service', 'edge_tts');
     const [hideWindow] = useConfig('translate_hide_window', false);
     const [hideSource] = useConfig('hide_source', false);
     const [ttsPluginInfo, setTtsPluginInfo] = useState();
@@ -57,6 +59,7 @@ export default function SourceArea(props) {
     const { t } = useTranslation();
     const textAreaRef = useRef();
     const speak = useVoice();
+    const ttsInstanceKey = resolveActiveTtsInstanceKey(ttsServiceList, ttsActiveService);
 
     const handleNewText = async (text) => {
         text = text.trim();
@@ -189,37 +192,33 @@ export default function SourceArea(props) {
     };
 
     const handleSpeak = async () => {
-        const instanceKey = ttsServiceList[0];
-        let detected = detectLanguage;
-        if (detected === '') {
-            detected = await detect(sourceText);
-            setDetectLanguage(detected);
+        const instanceKey = ttsInstanceKey;
+        if (!instanceKey) {
+            throw new Error('No TTS service configured');
         }
-        if (getServiceSouceType(instanceKey) === ServiceSourceType.PLUGIN) {
-            if (!(detected in ttsPluginInfo.language)) {
-                throw new Error('Language not supported');
-            }
-            const pluginConfig = serviceInstanceConfigMap[instanceKey];
-            let [func, utils] = await invoke_plugin('tts', getServiceName(instanceKey));
-            let data = await func(sourceText, ttsPluginInfo.language[detected], {
-                config: pluginConfig,
-                utils,
-            });
-            speak(data);
-        } else {
-            if (!(detected in builtinTtsServices[getServiceName(instanceKey)].Language)) {
-                throw new Error('Language not supported');
-            }
-            const instanceConfig = serviceInstanceConfigMap[instanceKey];
-            let data = await builtinTtsServices[getServiceName(instanceKey)].tts(
-                sourceText,
-                builtinTtsServices[getServiceName(instanceKey)].Language[detected],
-                {
-                    config: instanceConfig,
+        // Shared playback owner: a repeat click stops, and a stale synthesis never plays.
+        await speak.speak(
+            JSON.stringify(['source', instanceKey, sourceText]),
+            async () => {
+                let detected = detectLanguage;
+                if (detected === '') {
+                    detected = await detect(sourceText);
+                    setDetectLanguage(detected);
                 }
-            );
-            speak(data);
-        }
+                return synthesizeSpeech({
+                    instanceKey,
+                    serviceName: getServiceName(instanceKey),
+                    isPlugin: getServiceSouceType(instanceKey) === ServiceSourceType.PLUGIN,
+                    text: sourceText,
+                    languageKey: detected,
+                    serviceInstanceConfigMap,
+                    pluginInfo: ttsPluginInfo,
+                    builtinTtsServices,
+                    invokePlugin: invoke_plugin,
+                });
+            },
+            { owner: 'source-area' }
+        );
     };
 
     useEffect(() => {
@@ -277,14 +276,22 @@ export default function SourceArea(props) {
     }, [windowType, sourceText, hideWindow]);
 
     useEffect(() => {
-        if (ttsServiceList && getServiceSouceType(ttsServiceList[0]) === ServiceSourceType.PLUGIN) {
-            readTextFile(`plugins/tts/${getServiceName(ttsServiceList[0])}/info.json`, {
+        // Plugin info must always belong to the instance Speak will use
+        setTtsPluginInfo(undefined);
+        if (ttsInstanceKey && getServiceSouceType(ttsInstanceKey) === ServiceSourceType.PLUGIN) {
+            let cancelled = false;
+            readTextFile(`plugins/tts/${getServiceName(ttsInstanceKey)}/info.json`, {
                 dir: BaseDirectory.AppConfig,
-            }).then((infoStr) => {
-                setTtsPluginInfo(JSON.parse(infoStr));
-            });
+            })
+                .then((infoStr) => {
+                    if (!cancelled) setTtsPluginInfo(JSON.parse(infoStr));
+                })
+                .catch(() => {});
+            return () => {
+                cancelled = true;
+            };
         }
-    }, [ttsServiceList]);
+    }, [ttsServiceList, ttsInstanceKey]);
 
     useEffect(() => {
         if (

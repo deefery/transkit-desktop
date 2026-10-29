@@ -9,11 +9,19 @@ async function getSidecarPort() {
     return port;
 }
 
-export async function summarize(text, options = {}) {
-    const { config } = options;
-    const port = await getSidecarPort();
-
-    const messages = config?.promptList?.length
+// Messages of one call. `options.actionInstruction` (a string) is supplied per call by the selection
+// AI actions: it is that call's system instruction and `text` its user message, both sent verbatim
+// (no `$text` substitution; neither the stored promptList nor the default prompt applies). Every other
+// caller omits it and keeps the stored promptList template / default prompt as before.
+function buildMessages(text, options = {}) {
+    const { config, actionInstruction } = options;
+    if (typeof actionInstruction === 'string') {
+        return [
+            { role: 'system', content: actionInstruction },
+            { role: 'user', content: text },
+        ];
+    }
+    return config?.promptList?.length
         ? config.promptList.map(m => ({
             role: m.role,
             content: m.content.replaceAll('$text', text),
@@ -22,6 +30,12 @@ export async function summarize(text, options = {}) {
             { role: 'system', content: 'You are a helpful assistant.' },
             { role: 'user',   content: text },
           ];
+}
+
+export async function summarize(text, options = {}) {
+    const { config } = options;
+    const port = await getSidecarPort();
+    const messages = buildMessages(text, options);
 
     const res = await fetch(`http://127.0.0.1:${port}/v1/chat`, {
         method: 'POST',

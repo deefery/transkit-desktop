@@ -26,7 +26,7 @@ import { useTranslation } from 'react-i18next';
 import Database from 'tauri-plugin-sql-api';
 import { GiCycle } from 'react-icons/gi';
 import { useTheme } from 'next-themes';
-import { useAtomValue } from 'jotai';
+import { useAtomValue, useSetAtom } from 'jotai';
 import { nanoid } from 'nanoid';
 import { useSpring, animated } from '@react-spring/web';
 import useMeasure from 'react-use-measure';
@@ -38,6 +38,13 @@ import { sourceTextAtom, detectLanguageAtom, windowTypeAtom } from '../SourceAre
 import { invoke_plugin } from '../../../../utils/invoke_plugin';
 import * as builtinServices from '../../../../services/translate';
 import * as builtinTtsServices from '../../../../services/tts';
+import { resolveActiveTtsInstanceKey, synthesizeSpeech } from '../../../../utils/tts_service';
+import {
+    clearTranslationRecord,
+    retranslateNonceAtom,
+    trackTranslation,
+    translationRecordsAtom,
+} from '../../../../features/selection-actions/translationRecords';
 
 import { info, error as logError } from 'tauri-plugin-log-api';
 import {
@@ -63,6 +70,7 @@ export default function TargetArea(props) {
     const [appFontSize] = useConfig('app_font_size', 16);
     const [collectionServiceList] = useConfig('collection_service_list', []);
     const [ttsServiceList] = useConfig('tts_service_list', ['lingva_tts']);
+    const [ttsActiveService] = useConfig('tts_active_service', 'edge_tts');
     const [translateSecondLanguage] = useConfig('translate_second_language', 'en');
     const [historyDisable] = useConfig('history_disable', false);
     const [isLoading, setIsLoading] = useState(false);
@@ -80,6 +88,9 @@ export default function TargetArea(props) {
 
     const detectLanguage = useAtomValue(detectLanguageAtom);
     const windowType = useAtomValue(windowTypeAtom);
+    // Selection actions: request-time translation records and the "translate again" signal.
+    const setTranslationRecords = useSetAtom(translationRecordsAtom);
+    const retranslateNonce = useAtomValue(retranslateNonceAtom);
     const [ttsPluginInfo, setTtsPluginInfo] = useState();
     const [showDetailedTranslations, setShowDetailedTranslations] = useState(false);
     const { t } = useTranslation();
@@ -87,6 +98,7 @@ export default function TargetArea(props) {
     const toastStyle = useToastStyle();
     const toastStyleRef = useRef(toastStyle);
     const speak = useVoice();
+    const ttsInstanceKey = resolveActiveTtsInstanceKey(ttsServiceList, ttsActiveService);
     const theme = useTheme();
 
     useEffect(() => {
@@ -129,7 +141,13 @@ export default function TargetArea(props) {
         hideWindow,
         currentTranslateServiceInstanceKey,
         clipboardMonitor,
+        retranslateNonce,
     ]);
+
+    // The published record belongs to this mounted instance only.
+    useEffect(() => {
+        return () => clearTranslationRecord(setTranslationRecords, currentTranslateServiceInstanceKey);
+    }, [currentTranslateServiceInstanceKey]);
 
     // todo: history panel use service instance key
     const addToHistory = async (text, source, target, serviceInstanceKey, result) => {
@@ -173,6 +191,16 @@ export default function TargetArea(props) {
         translateID[index] = id;
 
         const translateServiceName = getServiceName(currentTranslateServiceInstanceKey);
+        // Publish this request (text/languages/provider snapshot) for the selection actions.
+        const track = (effectiveTargetLanguage) =>
+            trackTranslation(setTranslationRecords, {
+                instanceKey: currentTranslateServiceInstanceKey,
+                text: sourceText.trim(),
+                sourceLanguage,
+                targetLanguage,
+                effectiveTargetLanguage,
+                detectLanguage,
+            });
 
         if (whetherPluginService(currentTranslateServiceInstanceKey)) {
             const pluginInfo = pluginList['translate'][translateServiceName];
@@ -182,6 +210,7 @@ export default function TargetArea(props) {
                     newTargetLanguage = translateSecondLanguage;
                 }
                 setIsLoading(true);
+                const tracking = track(newTargetLanguage);
                 // setHide(true); // Removed to prevent flash animation
                 const instanceConfig = serviceInstanceConfigMap[currentTranslateServiceInstanceKey];
                 instanceConfig['enable'] = 'true';
@@ -201,6 +230,7 @@ export default function TargetArea(props) {
                         info(`[${currentTranslateServiceInstanceKey}]resolve:` + v);
                         if (translateID[index] !== id) return;
                         setResult(typeof v === 'string' ? v.trim() : v);
+                        tracking.success(v);
                         setIsLoading(false);
                         if (v !== '') {
                             setHideOnce(false);
@@ -242,11 +272,13 @@ export default function TargetArea(props) {
                         info(`[${currentTranslateServiceInstanceKey}]reject:` + e);
                         if (translateID[index] !== id) return;
                         setError(e.toString());
+                        tracking.failure(e);
                         setIsLoading(false);
                     }
                 );
             } else {
                 setError('Language not supported');
+                track(targetLanguage).failure('Language not supported');
             }
         } else {
             const LanguageEnum = builtinServices[translateServiceName].Language;
@@ -256,6 +288,7 @@ export default function TargetArea(props) {
                     newTargetLanguage = translateSecondLanguage;
                 }
                 setIsLoading(true);
+                const tracking = track(newTargetLanguage);
                 // setHide(true); // Removed to prevent flash animation
                 const instanceConfig = serviceInstanceConfigMap[currentTranslateServiceInstanceKey];
                 const setHideOnce = invokeOnce(setHide);
@@ -274,6 +307,7 @@ export default function TargetArea(props) {
                             info(`[${currentTranslateServiceInstanceKey}]resolve:` + v);
                             if (translateID[index] !== id) return;
                             setResult(typeof v === 'string' ? v.trim() : v);
+                            tracking.success(v);
                             setIsLoading(false);
                             if (v !== '') {
                                 setHideOnce(false);
@@ -315,11 +349,13 @@ export default function TargetArea(props) {
                             info(`[${currentTranslateServiceInstanceKey}]reject:` + e);
                             if (translateID[index] !== id) return;
                             setError(e.toString());
+                            tracking.failure(e);
                             setIsLoading(false);
                         }
                     );
             } else {
                 setError('Language not supported');
+                track(targetLanguage).failure('Language not supported');
             }
         }
     };
@@ -336,44 +372,47 @@ export default function TargetArea(props) {
 
     // refresh tts config
     useEffect(() => {
-        if (ttsServiceList && getServiceSouceType(ttsServiceList[0]) === ServiceSourceType.PLUGIN) {
-            readTextFile(`plugins/tts/${getServiceName(ttsServiceList[0])}/info.json`, {
+        // Plugin info must always belong to the instance Speak will use
+        setTtsPluginInfo(undefined);
+        if (ttsInstanceKey && getServiceSouceType(ttsInstanceKey) === ServiceSourceType.PLUGIN) {
+            let cancelled = false;
+            readTextFile(`plugins/tts/${getServiceName(ttsInstanceKey)}/info.json`, {
                 dir: BaseDirectory.AppConfig,
-            }).then((infoStr) => {
-                setTtsPluginInfo(JSON.parse(infoStr));
-            });
+            })
+                .then((infoStr) => {
+                    if (!cancelled) setTtsPluginInfo(JSON.parse(infoStr));
+                })
+                .catch(() => {});
+            return () => {
+                cancelled = true;
+            };
         }
-    }, [ttsServiceList]);
+    }, [ttsServiceList, ttsInstanceKey]);
 
     // handle tts speak
     const handleSpeak = async () => {
-        const instanceKey = ttsServiceList[0];
-        const textToSpeak = typeof result === 'string' ? result : result.translation || '';
-        if (getServiceSouceType(instanceKey) === ServiceSourceType.PLUGIN) {
-            const pluginConfig = serviceInstanceConfigMap[instanceKey];
-            if (!(targetLanguage in ttsPluginInfo.language)) {
-                throw new Error('Language not supported');
-            }
-            let [func, utils] = await invoke_plugin('tts', getServiceName(instanceKey));
-            let data = await func(textToSpeak, ttsPluginInfo.language[targetLanguage], {
-                config: pluginConfig,
-                utils,
-            });
-            speak(data);
-        } else {
-            if (!(targetLanguage in builtinTtsServices[getServiceName(instanceKey)].Language)) {
-                throw new Error('Language not supported');
-            }
-            const instanceConfig = serviceInstanceConfigMap[instanceKey];
-            let data = await builtinTtsServices[getServiceName(instanceKey)].tts(
-                textToSpeak,
-                builtinTtsServices[getServiceName(instanceKey)].Language[targetLanguage],
-                {
-                    config: instanceConfig,
-                }
-            );
-            speak(data);
+        const instanceKey = ttsInstanceKey;
+        if (!instanceKey) {
+            throw new Error('No TTS service configured');
         }
+        const textToSpeak = typeof result === 'string' ? result : result.translation || '';
+        // Shared playback owner: a repeat click stops, and a stale synthesis never plays.
+        await speak.speak(
+            JSON.stringify(['target', instanceKey, targetLanguage, textToSpeak]),
+            () =>
+                synthesizeSpeech({
+                    instanceKey,
+                    serviceName: getServiceName(instanceKey),
+                    isPlugin: getServiceSouceType(instanceKey) === ServiceSourceType.PLUGIN,
+                    text: textToSpeak,
+                    languageKey: targetLanguage,
+                    serviceInstanceConfigMap,
+                    pluginInfo: ttsPluginInfo,
+                    builtinTtsServices,
+                    invokePlugin: invoke_plugin,
+                }),
+            { owner: 'target-area' }
+        );
     };
 
     const [boundRef, bounds] = useMeasure({ scroll: true });
@@ -435,6 +474,9 @@ export default function TargetArea(props) {
                     className='h-[26px] w-[26px] min-w-0 bg-transparent'
                     onPress={async () => {
                         setError('');
+                        // The visible result is about to become a back-translation, which no
+                        // longer matches the recorded request; it must not be spoken as such.
+                        clearTranslationRecord(setTranslationRecords, currentTranslateServiceInstanceKey);
                         let newTargetLanguage = sourceLanguage;
                         if (sourceLanguage === 'auto') {
                             newTargetLanguage = detectLanguage;
@@ -648,6 +690,9 @@ export default function TargetArea(props) {
         targetLanguage,
         detectLanguage,
         collectionServiceListKey,
+        ttsInstanceKey,
+        ttsPluginInfo,
+        serviceInstanceConfigMap,
         t,
     ]);
 

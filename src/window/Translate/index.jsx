@@ -13,6 +13,7 @@ import { IoMdCheckmark } from 'react-icons/io';
 import LanguageArea from './components/LanguageArea';
 import SourceArea, { windowTypeAtom } from './components/SourceArea';
 import TargetArea from './components/TargetArea';
+import SelectionActionPalette from '../../features/selection-actions/SelectionActionPalette';
 import { useAtomValue } from 'jotai';
 import { getServiceName, whetherPluginService } from '../../utils/service_instance';
 import * as builtinServices from '../../services/translate';
@@ -496,6 +497,11 @@ export default function Translate() {
                         <LanguageArea />
                         <Spacer y={1} />
                     </div>
+
+                    {/* Selection actions (selection Translate window only) */}
+                    {windowType === '[SELECTION_TRANSLATE]' && serviceInstanceConfigMap !== null && (
+                        <SelectionActionPalette serviceInstanceConfigMap={serviceInstanceConfigMap} />
+                    )}
 
                     {/* Translation Results Section - Different layout based on window type */}
                     {windowType === '[INPUT_TRANSLATE]' ? (
