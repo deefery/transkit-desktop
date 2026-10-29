@@ -8,7 +8,7 @@
   },
   "package": {
     "productName": "TransKit",
-    "version": "3.2.7"
+    "version": "3.3.5-deefery.1"
   },
   "tauri": {
     "allowlist": {
@@ -179,10 +179,7 @@
     "updater": {
       "active": true,
       "dialog": false,
-      "endpoints": [
-        "https://github.com/transkit-app/transkit-desktop/releases/download/updater/update.json",
-        "https://transkit-app.pages.dev/api/update"
-      ],
+      "endpoints": [],
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEM0MDY3ODA3OEMzOTdBRUIKUldUcmVqbU1CM2dHeER2UGQ3YU42YlQ2cWRBVkdGbjB0UTUyL0tKRW5sbHNTa252YVg3THNNWVEK"
     }
   }
