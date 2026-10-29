@@ -24,13 +24,14 @@ import vi_VN from './locales/vi_VN.json';
 // http://www.lingoes.net/zh/translator/langcode.htm
 
 i18n.use(initReactI18next).init({
+    // A language-specific entry replaces `default`, so each chain must end with 'en'.
     fallbackLng: {
-        zh_tw: ['zh_cn'],
-        zh_cn: ['zh_tw'],
-        pt_pt: ['pt_br'],
-        pt_br: ['pt_pt'],
-        nb_no: ['nn_no'],
-        nn_no: ['nb_no'],
+        zh_tw: ['zh_cn', 'en'],
+        zh_cn: ['zh_tw', 'en'],
+        pt_pt: ['pt_br', 'en'],
+        pt_br: ['pt_pt', 'en'],
+        nb_no: ['nn_no', 'en'],
+        nn_no: ['nb_no', 'en'],
         default: ['en'],
     },
     debug: false,
