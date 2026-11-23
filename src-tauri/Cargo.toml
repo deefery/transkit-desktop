@@ -45,6 +45,7 @@ walkdir = "2.5"
 thiserror = "1.0"
 font-kit = "0.14.2"
 image = "0.25.4"
+rand = "0.8"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 macos-accessibility-client = "0.0.1"
@@ -53,7 +54,7 @@ screencapturekit = "1.5"
 objc = "0.2"
 
 [target.'cfg(windows)'.dependencies]
-windows = {version="0.58.0",features= ["Win32_UI_WindowsAndMessaging", "Win32_UI_Input_KeyboardAndMouse", "Win32_Foundation", "Graphics_Imaging", "Media_Ocr", "Foundation", "Globalization", "Storage", "Storage_Streams", "Win32_Media_Audio", "Win32_System_Com"] }
+windows = {version="0.58.0",features= ["Win32_UI_WindowsAndMessaging", "Win32_UI_Input_KeyboardAndMouse", "Win32_Foundation", "Graphics_Imaging", "Media_Ocr", "Foundation", "Globalization", "Storage", "Storage_Streams", "Win32_Media_Audio", "Win32_System_Com", "Win32_Security_Cryptography"] }
 window-shadows = "0.2"
 
 [target.'cfg(target_os = "linux")'.dependencies]

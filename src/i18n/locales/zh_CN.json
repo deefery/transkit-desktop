@@ -1,5 +1,25 @@
 {
   "translation": {
+    "chatgpt": {
+      "account": "ChatGPT 账号",
+      "signed_in": "已登录",
+      "connected_as": "已连接：{{account}}",
+      "not_signed_in": "未登录。登录后可直接使用 ChatGPT 订阅额度，无需 API Key。",
+      "reauth_required": "ChatGPT 连接已过期，请重新连接后继续使用。",
+      "sign_in": "使用 ChatGPT 登录",
+      "reconnect": "重新连接",
+      "cancel": "取消",
+      "sign_out": "退出登录",
+      "waiting_for_browser": "请在浏览器中完成登录。如果页面没有回到 TransKit，可能是某个浏览器扩展拦截了 127.0.0.1 的回调。",
+      "sharing_off": "已登录，但未授予额度共享权限，请求将会失败。",
+      "enable_sharing": "开启额度共享",
+      "quota_note": "请求将消耗你的 ChatGPT 订阅额度。",
+      "manage_usage": "管理用量",
+      "model": "模型",
+      "model_auto": "留空则使用 ChatGPT 提供的第一个模型",
+      "choose_model": "选择",
+      "revoke_unconfirmed": "已在本地退出登录，但 ChatGPT 未能确认断开连接。你也可以在 ChatGPT 设置中移除 TransKit。"
+    },
     "common": {
       "ok": "确定",
       "cancel": "取消",
@@ -543,6 +563,10 @@
           "prompt_description": "通过自定义Prompt自定义AI的行为, $text $from $to $detect 将会被替换为 待翻译文本，源语言，目标语言和检测到的语言。",
           "add": "添加 Prompt"
         },
+        "chatgpt": {
+          "title": "ChatGPT 订阅",
+          "prompt_description": "第一条 system 内容会作为指令发送。每条内容中的 $text、$from、$to、$detect 会被替换。"
+        },
         "openai": {
           "title": "OpenAI",
           "service": "服务提供商",
@@ -845,6 +869,9 @@
         },
         "openai_ai": {
           "title": "OpenAI"
+        },
+        "chatgpt_ai": {
+          "title": "ChatGPT 订阅"
         },
         "groq_ai": {
           "title": "Groq"

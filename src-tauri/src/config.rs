@@ -91,6 +91,7 @@ pub fn check_service_available() -> Result<(), Error> {
         "niutrans",
         "ollama",
         "openai",
+        "chatgpt",
         "openrouter",
         "google",
         "tencent",
@@ -113,6 +114,7 @@ pub fn check_service_available() -> Result<(), Error> {
         "vieneu_tts",
     ];
     let builtin_ai_list: Vec<&str> = vec![
+        "chatgpt_ai",
         "gemini_ai",
         "groq_ai",
         "local_sidecar_ai",

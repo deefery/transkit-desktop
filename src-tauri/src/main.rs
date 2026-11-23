@@ -5,6 +5,7 @@ mod audio;
 mod audio_cmd;
 mod auth;
 mod backup;
+mod chatgpt;
 mod clipboard;
 mod cmd;
 mod config;
@@ -160,6 +161,7 @@ fn main() {
             app.manage(NarrationState::new());
             app.manage(VoiceAnywhereState::new());
             app.manage(LocalSidecarState::new());
+            app.manage(chatgpt::ChatGptState::new());
             app.manage(OnnxEngineState::new());
             // Update Tray Menu
             update_tray(app.app_handle(), "".to_string(), "".to_string());
@@ -287,6 +289,12 @@ fn main() {
             open_config_window,
             restart_app,
             start_oauth_server,
+            chatgpt::chatgpt_status,
+            chatgpt::chatgpt_sign_in,
+            chatgpt::chatgpt_cancel_sign_in,
+            chatgpt::chatgpt_sign_out,
+            chatgpt::chatgpt_list_models,
+            chatgpt::chatgpt_respond,
             narration_list_devices,
             narration_detect_devices,
             narration_setup,

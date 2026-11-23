@@ -13,6 +13,7 @@ const globalServices = [
     'google',
     'bing',
     'openai',
+    'chatgpt',
     'geminipro',
     'openrouter',
     'groq',

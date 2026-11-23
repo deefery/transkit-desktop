@@ -1,5 +1,25 @@
 {
   "translation": {
+    "chatgpt": {
+      "account": "ChatGPT account",
+      "signed_in": "Signed in",
+      "connected_as": "Connected as {{account}}",
+      "not_signed_in": "Not signed in. Sign in to use your ChatGPT plan instead of an API key.",
+      "reauth_required": "Your ChatGPT connection expired. Reconnect to keep using it.",
+      "sign_in": "Sign in with ChatGPT",
+      "reconnect": "Reconnect",
+      "cancel": "Cancel",
+      "sign_out": "Sign out",
+      "waiting_for_browser": "Finish signing in in your browser. If the page does not return to TransKit, a browser extension may be intercepting the 127.0.0.1 callback.",
+      "sharing_off": "Signed in, but usage sharing was not granted, so requests will fail.",
+      "enable_sharing": "Enable usage sharing",
+      "quota_note": "Requests use your ChatGPT plan's usage limits.",
+      "manage_usage": "Manage usage",
+      "model": "Model",
+      "model_auto": "Leave empty to use the first model ChatGPT offers",
+      "choose_model": "Choose",
+      "revoke_unconfirmed": "Signed out locally, but ChatGPT could not confirm the disconnection. You can also remove TransKit in ChatGPT settings."
+    },
     "common": {
       "ok": "Ok",
       "cancel": "Cancel",
@@ -696,6 +716,10 @@
           "prompt_description": "By customizing the Prompt, you can customize the behavior of AI. $text $from $to $detect will be replaced with the text to be translated, source language, target language and detected language.",
           "add": "Add Prompt"
         },
+        "chatgpt": {
+          "title": "ChatGPT Plan",
+          "prompt_description": "The first system entry is sent as instructions. $text, $from, $to and $detect are replaced in each entry."
+        },
         "openai": {
           "title": "OpenAI",
           "service": "Service Provider",
@@ -987,6 +1011,9 @@
         },
         "openai_ai": {
           "title": "OpenAI"
+        },
+        "chatgpt_ai": {
+          "title": "ChatGPT Plan"
         },
         "groq_ai": {
           "title": "Groq"
