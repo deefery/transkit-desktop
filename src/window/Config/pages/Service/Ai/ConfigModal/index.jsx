@@ -25,7 +25,7 @@ export default function ConfigModal(props) {
     return pluginServiceFlag && !(serviceName in pluginList) ? (
         <></>
     ) : (
-        <Modal isOpen={isOpen} onOpenChange={onOpenChange} scrollBehavior='inside'>
+        <Modal isOpen={isOpen} onOpenChange={onOpenChange} scrollBehavior='inside' isDismissable={false}>
             <ModalContent className='max-h-[75vh]'>
                 {(onClose) => (
                     <>
