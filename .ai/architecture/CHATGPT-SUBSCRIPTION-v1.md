@@ -45,6 +45,20 @@ shows a warning and offers re-consent (`prompt=consent`).
 - No redirects are followed on any OpenAI request. Error text shown to users is fixed copy keyed by
   error code; server messages (which can echo the prompt) are never displayed.
 
+## Shared settings and the two services
+
+The account is one connection in Rust, shared by both services. Service *instances* stay per type
+(translate list / AI list), as everywhere else in the app, but they no longer duplicate the model:
+
+- `chatgpt_settings.model` (store key `chatgpt_settings`) is the default model for both services.
+- An instance's own `model` is an optional override; empty means "follow the default". The model is
+  resolved at request time (`resolveChatGPTModel`), so changing the default takes effect immediately.
+- When adding either service, a switch (default on) also creates the sibling instance in the other
+  list, with default settings that follow the shared model. It is only offered when no sibling exists
+  (`companionMissing`). Pure logic: `src/utils/chatgpt_shared.js`; store I/O: `src/utils/chatgpt_settings.js`.
+- Registration name is `TransKit (<machine name>)` so several machines are distinguishable in ChatGPT's
+  connection management. It is only sent on the first registration; sign-out keeps the registration.
+
 ## Licensing
 
 OpenAI's DevKit is under a **noncommercial** license; TransKit is GPL-3.0. This is an independent

@@ -1,4 +1,5 @@
 import { chatgptRespond, fillPlaceholders, splitPromptList } from '../../../utils/chatgpt';
+import { resolveChatGPTModel } from '../../../utils/chatgpt_settings';
 import { Language } from './info';
 import { defaultPromptList } from './prompt';
 
@@ -16,7 +17,8 @@ export async function translate(text, from, to, options) {
     const streaming = Boolean(config.stream) && typeof setResult === 'function';
     let partial = '';
     const output = await chatgptRespond({
-        model: config.model,
+        // Empty `config.model` follows the default model shared with the AI service.
+        model: await resolveChatGPTModel(config.model),
         instructions,
         input,
         onDelta: streaming

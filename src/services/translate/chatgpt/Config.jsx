@@ -5,6 +5,8 @@ import { useTranslation } from 'react-i18next';
 import React, { useState } from 'react';
 
 import ChatGPTAccount from '../../../components/ChatGPTAccount';
+import { CompanionSwitch, useChatGPTCompanion } from '../../../components/ChatGPTAccount/companion';
+import { COMPANIONS } from '../../../utils/chatgpt_shared';
 import { useConfig } from '../../../hooks/useConfig';
 import { useToastStyle } from '../../../hooks';
 import { INSTANCE_NAME_CONFIG_KEY } from '../../../utils/service_instance';
@@ -27,6 +29,7 @@ export function Config(props) {
     );
     const [isLoading, setIsLoading] = useState(false);
     const [signedIn, setSignedIn] = useState(false);
+    const companion = useChatGPTCompanion('chatgpt');
     const toastStyle = useToastStyle();
 
     return (
@@ -36,9 +39,16 @@ export function Config(props) {
                     e.preventDefault();
                     setIsLoading(true);
                     translate('hello', Language.auto, Language.zh_cn, { config }).then(
-                        () => {
-                            setIsLoading(false);
+                        async () => {
                             setConfig(config, true);
+                            try {
+                                await companion.addIfWanted(t(COMPANIONS.chatgpt.titleKey));
+                            } catch (error) {
+                                toast.error(t('chatgpt.also_add_failed') + (error?.message ?? String(error)), {
+                                    style: toastStyle,
+                                });
+                            }
+                            setIsLoading(false);
                             updateServiceList(instanceKey);
                             onClose();
                         },
@@ -67,6 +77,7 @@ export function Config(props) {
                     onModelChange={(model) => setConfig({ ...config, model })}
                     onStatusChange={(session) => setSignedIn(session.status === 'connected' && session.sharing)}
                 />
+                <CompanionSwitch mainService='chatgpt' companion={companion} />
                 <div className='config-item'>
                     <Switch
                         isSelected={config.stream}

@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next';
 import React, { useState } from 'react';
 
 import ChatGPTAccount from '../../../components/ChatGPTAccount';
+import { CompanionSwitch, useChatGPTCompanion } from '../../../components/ChatGPTAccount/companion';
+import { COMPANIONS } from '../../../utils/chatgpt_shared';
 import { useConfig } from '../../../hooks/useConfig';
 import { useToastStyle } from '../../../hooks';
 import { INSTANCE_NAME_CONFIG_KEY } from '../../../utils/service_instance';
@@ -14,6 +16,7 @@ export function Config(props) {
     const { t } = useTranslation();
     const [isLoading, setIsLoading] = useState(false);
     const [signedIn, setSignedIn] = useState(false);
+    const companion = useChatGPTCompanion('chatgpt_ai');
     const toastStyle = useToastStyle();
 
     const [config, setConfig] = useConfig(
@@ -45,6 +48,7 @@ export function Config(props) {
                     onModelChange={(model) => setConfig({ ...config, model })}
                     onStatusChange={(session) => setSignedIn(session.status === 'connected' && session.sharing)}
                 />
+                <CompanionSwitch mainService='chatgpt_ai' companion={companion} />
                 <div className='config-item flex-col gap-1'>
                     <p className='text-sm'>{t('services.ai.openai_compat_ai.system_prompt')}</p>
                     <Textarea
@@ -64,9 +68,16 @@ export function Config(props) {
                         onPress={() => {
                             setIsLoading(true);
                             summarize('Hello world', { config }).then(
-                                () => {
-                                    setIsLoading(false);
+                                async () => {
                                     setConfig(config, true);
+                                    try {
+                                        await companion.addIfWanted(t(COMPANIONS.chatgpt_ai.titleKey));
+                                    } catch (error) {
+                                        toast.error(t('chatgpt.also_add_failed') + (error?.message ?? String(error)), {
+                                            style: toastStyle,
+                                        });
+                                    }
+                                    setIsLoading(false);
                                     updateServiceList(instanceKey);
                                     onClose();
                                 },

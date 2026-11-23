@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
 
 import { useToastStyle } from '../../hooks';
+import { useConfig } from '../../hooks/useConfig';
 import {
     CHATGPT_USAGE_URL,
     cancelChatGPTSignIn,
@@ -14,9 +15,53 @@ import {
     signInChatGPT,
     signOutChatGPT,
 } from '../../utils/chatgpt';
+import { SHARED_SETTINGS_KEY } from '../../utils/chatgpt_shared';
+
+function ModelField({ label, value, onChange, placeholder, models, chooseLabel }) {
+    return (
+        <div className='config-item'>
+            <Input
+                label={label}
+                labelPlacement='outside'
+                placeholder={placeholder}
+                value={value ?? ''}
+                variant='bordered'
+                classNames={{ label: 'text-xs text-default-500 pb-1' }}
+                onValueChange={onChange}
+                endContent={
+                    models.length > 0 && (
+                        <Dropdown>
+                            <DropdownTrigger>
+                                <Button size='sm' variant='flat' className='h-6 min-w-0 px-2'>
+                                    {chooseLabel}
+                                </Button>
+                            </DropdownTrigger>
+                            <DropdownMenu
+                                aria-label='models'
+                                className='max-h-[40vh] overflow-y-auto'
+                                onAction={(key) => onChange(String(key))}
+                            >
+                                {models.map((m) => (
+                                    <DropdownItem key={m.slug} description={m.slug !== m.display_name ? m.slug : undefined}>
+                                        {m.display_name}
+                                    </DropdownItem>
+                                ))}
+                            </DropdownMenu>
+                        </Dropdown>
+                    )
+                }
+            />
+        </div>
+    );
+}
 
 /**
  * Account + model section shared by the ChatGPT-plan service configs.
+ *
+ * Two model fields: the *default model* is one setting shared by the translate and AI services
+ * (stored under `chatgpt_settings`); `model` / `onModelChange` is this service's own optional
+ * override (empty = follow the default).
+ *
  * `onStatusChange(status)` reports `connected` / `disconnected` / `reauth_required` so the parent
  * can enable its Save button only when requests can succeed.
  */
@@ -26,6 +71,7 @@ export default function ChatGPTAccount({ model, onModelChange, onStatusChange })
     const [session, setSession] = useState(null);
     const [busy, setBusy] = useState(false);
     const [models, setModels] = useState([]);
+    const [shared, setShared] = useConfig(SHARED_SETTINGS_KEY, { model: '' });
     const onStatusChangeRef = useRef(onStatusChange);
     onStatusChangeRef.current = onStatusChange;
 
@@ -87,10 +133,11 @@ export default function ChatGPTAccount({ model, onModelChange, onStatusChange })
         }
     };
 
-    if (session === null) return null;
+    if (session === null || shared === null) return null;
 
     const signedIn = session.status === 'connected';
     const label = signedIn ? session.email || session.name || t('chatgpt.signed_in') : null;
+    const defaultModel = (shared.model ?? '').trim();
 
     return (
         <>
@@ -144,39 +191,26 @@ export default function ChatGPTAccount({ model, onModelChange, onStatusChange })
                     </Button>
                 </div>
             </div>
-            <div className='config-item'>
-                <Input
-                    label={t('chatgpt.model')}
-                    labelPlacement='outside'
-                    placeholder={t('chatgpt.model_auto')}
-                    value={model ?? ''}
-                    variant='bordered'
-                    classNames={{ label: 'text-xs text-default-500 pb-1' }}
-                    onValueChange={onModelChange}
-                    endContent={
-                        models.length > 0 && (
-                            <Dropdown>
-                                <DropdownTrigger>
-                                    <Button size='sm' variant='flat' className='h-6 min-w-0 px-2'>
-                                        {t('chatgpt.choose_model')}
-                                    </Button>
-                                </DropdownTrigger>
-                                <DropdownMenu
-                                    aria-label='models'
-                                    className='max-h-[40vh] overflow-y-auto'
-                                    onAction={(key) => onModelChange(String(key))}
-                                >
-                                    {models.map((m) => (
-                                        <DropdownItem key={m.slug} description={m.slug !== m.display_name ? m.slug : undefined}>
-                                            {m.display_name}
-                                        </DropdownItem>
-                                    ))}
-                                </DropdownMenu>
-                            </Dropdown>
-                        )
-                    }
-                />
-            </div>
+            <ModelField
+                label={t('chatgpt.default_model')}
+                value={shared.model}
+                onChange={(value) => setShared({ ...shared, model: value })}
+                placeholder={t('chatgpt.model_auto')}
+                models={models}
+                chooseLabel={t('chatgpt.choose_model')}
+            />
+            <ModelField
+                label={t('chatgpt.service_model')}
+                value={model}
+                onChange={onModelChange}
+                placeholder={
+                    defaultModel
+                        ? t('chatgpt.follow_default', { model: defaultModel })
+                        : t('chatgpt.follow_default_auto')
+                }
+                models={models}
+                chooseLabel={t('chatgpt.choose_model')}
+            />
         </>
     );
 }
