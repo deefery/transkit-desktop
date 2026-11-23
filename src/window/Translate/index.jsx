@@ -22,6 +22,9 @@ import { useConfig } from '../../hooks';
 import { store } from '../../utils/store';
 import { info } from 'tauri-plugin-log-api';
 
+// Title bar height in px; also used by the auto-resize math below.
+const HEADER_HEIGHT = 40;
+
 let blurTimeout = null;
 let resizeTimeout = null;
 let moveTimeout = null;
@@ -287,7 +290,7 @@ export default function Translate() {
                 if (!contentRef.current) return;
                 const contentHeight = contentRef.current.offsetHeight;
                 const contentWidth = contentRef.current.scrollWidth;
-                const headerHeight = 32;
+                const headerHeight = HEADER_HEIGHT;
 
                 // Get monitor size for responsive max values
                 const monitor = await currentMonitor();
@@ -343,6 +346,7 @@ export default function Translate() {
     return (
         pluginList && (
             <div
+                data-tauri-drag-region='true'
                 className={`w-screen overflow-hidden ${
                     osType !== 'Darwin' && 'rounded-[12px]'
                 } ${
@@ -356,17 +360,20 @@ export default function Translate() {
                 }}
             >
                 {/*
-                    Title bar: the whole 32px row is the drag region (Tauri v1 only starts a drag when the
+                    Title bar: the whole row is the drag region (Tauri v1 only starts a drag when the
                     mouse-down target itself carries data-tauri-drag-region, so every non-button wrapper
                     inside the row carries it too and decorative children use pointer-events-none).
+                    The bar is tinted with the foreground colour (white in dark mode, black in light mode)
+                    so it stays distinguishable from the window background in both themes.
                 */}
                 <div
-                    className='group relative h-[32px] w-full flex justify-between cursor-grab active:cursor-grabbing'
+                    className='group relative w-full flex justify-between cursor-grab active:cursor-grabbing bg-foreground/10 hover:bg-foreground/15 border-b border-foreground/15 transition-colors'
+                    style={{ height: HEADER_HEIGHT }}
                     data-tauri-drag-region='true'
                 >
                     {/* Drag handle: a visible hint that this bar moves the window */}
                     <div className='absolute inset-x-0 top-0 h-full flex items-center justify-center pointer-events-none'>
-                        <div className='h-[4px] w-[36px] rounded-full bg-default-300/60 transition-colors group-hover:bg-default-400' />
+                        <div className='h-[5px] w-[56px] rounded-full bg-foreground/35 transition-colors group-hover:bg-foreground/70' />
                     </div>
 
                     {/* Left side: Empty space on macOS (system buttons), Action buttons on Windows */}
@@ -479,6 +486,7 @@ export default function Translate() {
                 <div
                     ref={contentRef}
                     className='px-[6px] pb-[6px] text-[12px] flex flex-col rounded-xl border border-content3 shadow-2xl overflow-hidden'
+                    data-tauri-drag-region='true'
                 >
                     {/* Source Area */}
                     <div>
