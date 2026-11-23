@@ -54,9 +54,9 @@ function HeaderThemeToggle() {
 // Logo Component
 function Logo() {
     return (
-        <div className="flex items-center gap-3 px-4" data-tauri-drag-region="true">
-            <img src="icon.png" alt="TransKit" className="w-10 h-10" />
-            <div className="flex flex-col">
+        <div className="flex items-center gap-3 px-4 cursor-grab active:cursor-grabbing" data-tauri-drag-region="true">
+            <img src="icon.png" alt="TransKit" className="w-10 h-10 pointer-events-none" draggable={false} />
+            <div className="flex flex-col pointer-events-none">
                 <span className="text-base font-heading font-semibold text-gradient">
                     TransKit
                 </span>
@@ -105,7 +105,7 @@ export default function Config() {
                 />
 
                 {/* Logo Area */}
-                <div className="py-4 shrink-0">
+                <div className="py-4 shrink-0" data-tauri-drag-region="true">
                     <Logo />
                     {updateAvailable && (
                         <div className="px-4 pt-2">
@@ -142,22 +142,32 @@ export default function Config() {
                 `}
             >
                 {/* Header */}
-                <header className="h-[52px] shrink-0 flex items-center justify-between px-4 border-b border-content3 dark:border-content3">
-                    {/* Drag region for header */}
-                    <div
-                        data-tauri-drag-region="true"
-                        className="absolute top-0 left-[210px] right-0 h-[12px]"
-                    />
+                {/*
+                    The whole header is the drag region. Tauri v1 only starts a drag when the mouse-down
+                    target itself carries data-tauri-drag-region, so non-button children carry it too (or are
+                    pointer-events-none). Tinted with the foreground colour so it is visible in dark mode.
+                */}
+                <header
+                    data-tauri-drag-region="true"
+                    className="group relative h-[52px] shrink-0 flex items-center justify-between px-4 border-b border-content3 dark:border-content3 bg-foreground/[0.06] hover:bg-foreground/10 transition-colors cursor-grab active:cursor-grabbing"
+                >
+                    {/* Drag handle: a visible hint that this bar moves the window */}
+                    <div className="absolute inset-x-0 top-0 h-full flex items-center justify-center pointer-events-none">
+                        <div className="h-[5px] w-[56px] rounded-full bg-foreground/30 transition-colors group-hover:bg-foreground/60" />
+                    </div>
 
                     {/* Page Title */}
-                    <div className="flex items-center gap-3">
-                        <h1 className="text-[16px] font-heading font-semibold text-foreground">
+                    <div className="flex items-center gap-3" data-tauri-drag-region="true">
+                        <h1
+                            data-tauri-drag-region="true"
+                            className="text-[16px] font-heading font-semibold text-foreground"
+                        >
                             {t(`config.${location.pathname.slice(1).replaceAll('-', '_')}.title`)}
                         </h1>
                     </div>
 
                     {/* Right side: theme toggle + window controls */}
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2" data-tauri-drag-region="true">
                         <HeaderThemeToggle />
                         {osType !== 'Darwin' && <WindowControl />}
                     </div>
