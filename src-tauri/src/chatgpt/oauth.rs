@@ -19,8 +19,10 @@ use once_cell::sync::Lazy;
 use rand::{rngs::OsRng, RngCore};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
+use std::io::{Read, Write};
+use std::net::{Shutdown, TcpListener, TcpStream};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use std::sync::{mpsc, Arc};
 use std::time::{Duration, Instant};
 
 pub const ISSUER: &str = "https://auth.openai.com";
@@ -33,6 +35,36 @@ pub const CALLBACK_PATH: &str = "/auth/callback";
 /// (e.g. a browser extension that rewrites `127.0.0.1:8787/auth/callback`) may already claim it.
 pub const REDIRECT_PORT: u16 = 18787;
 pub const APP_NAME: &str = "TransKit";
+const MAX_APP_NAME_LEN: usize = 64;
+
+/// The name this machine's registration shows up under in ChatGPT's connection management:
+/// `TransKit (<machine name>)`, so several computers can be told apart. Only the first sign-in on a
+/// machine registers a name; later sign-ins reuse the saved registration.
+pub fn registration_name() -> String {
+    let host = ["COMPUTERNAME", "HOSTNAME"]
+        .iter()
+        .find_map(|key| std::env::var(key).ok())
+        .or_else(|| std::fs::read_to_string("/etc/hostname").ok());
+    format_registration_name(host.as_deref())
+}
+
+/// Pure formatting half of [`registration_name`]: keep it short and free of anything odd, since it is
+/// shown in a settings list and sent as a query parameter.
+pub fn format_registration_name(host: Option<&str>) -> String {
+    let clean: String = host
+        .unwrap_or("")
+        .trim()
+        .chars()
+        .filter(|c| c.is_alphanumeric() || matches!(c, '-' | '_' | '.' | ' '))
+        .collect();
+    let clean = clean.trim();
+    if clean.is_empty() {
+        return APP_NAME.to_string();
+    }
+    let room = MAX_APP_NAME_LEN - APP_NAME.len() - 3;
+    let shown: String = clean.chars().take(room).collect();
+    format!("{APP_NAME} ({shown})")
+}
 const PLACEHOLDER_CLIENT_ID: &str = "dynamic_agent_client";
 const SIGN_IN_TIMEOUT: Duration = Duration::from_secs(5 * 60);
 
@@ -139,6 +171,8 @@ pub struct AuthRequest<'a> {
     pub code_challenge: &'a str,
     pub login_hint: Option<&'a str>,
     pub reconsent: bool,
+    /// Shown in ChatGPT for a new registration; ignored when `client_id` is already registered.
+    pub app_name: &'a str,
 }
 
 pub fn build_authorization_url(req: &AuthRequest) -> Result<String, ChatGptError> {
@@ -157,7 +191,7 @@ pub fn build_authorization_url(req: &AuthRequest) -> Result<String, ChatGptError
             .append_pair("code_challenge_method", "S256")
             .append_pair("code_challenge", req.code_challenge);
         if req.client_id.is_none() {
-            q.append_pair("agent_name_hint", APP_NAME);
+            q.append_pair("agent_name_hint", req.app_name);
         }
         if let Some(hint) = req.login_hint {
             q.append_pair("login_hint", hint);
@@ -278,30 +312,150 @@ fn callback_page() -> (String, String) {
     (html, csp)
 }
 
-fn respond(request: tiny_http::Request, status: u16, body: &str, csp: Option<&str>) {
-    let header = |name: &str, value: &str| tiny_http::Header::from_bytes(name, value).unwrap();
-    let mut response = tiny_http::Response::from_string(body)
-        .with_status_code(status)
-        .with_header(header("Cache-Control", "no-store"))
-        .with_header(header("Referrer-Policy", "no-referrer"))
-        .with_header(header("Content-Type", "text/html; charset=utf-8"));
-    if let Some(csp) = csp {
-        response = response.with_header(header("Content-Security-Policy", csp));
+/// Bind the loopback listener. Non-blocking so the wait loop can poll for cancellation and timeout.
+///
+/// This is deliberately a tiny listener of our own rather than `tiny_http`: that crate's accept
+/// thread `unwrap()`s while setting up each connection, so a single connection that is reset right
+/// after it is accepted (browser pre-connects, proxies, antivirus probes) panics the thread and
+/// silently closes the port, leaving the browser with "can't open this page" and no log entry.
+pub fn bind_listener(port: u16) -> std::io::Result<TcpListener> {
+    let listener = TcpListener::bind(("127.0.0.1", port))?;
+    listener.set_nonblocking(true)?;
+    Ok(listener)
+}
+
+#[derive(Debug, PartialEq, Eq)]
+struct RequestHead {
+    method_is_get: bool,
+    target: String,
+    host: Option<String>,
+}
+
+fn parse_request_head(buf: &[u8]) -> Option<RequestHead> {
+    let text = std::str::from_utf8(buf).ok()?;
+    let mut lines = text.split("\r\n");
+    let mut first = lines.next()?.split(' ');
+    let (method, target, version) = (first.next()?, first.next()?, first.next()?);
+    if !version.starts_with("HTTP/1.") || first.next().is_some() || target.is_empty() {
+        return None;
     }
-    if let Err(e) = request.respond(response) {
-        log::warn!("[chatgpt] could not answer the sign-in callback request: {e}");
+    let host = lines.take_while(|l| !l.is_empty()).find_map(|line| {
+        let (name, value) = line.split_once(':')?;
+        name.trim().eq_ignore_ascii_case("host").then(|| value.trim().to_string())
+    });
+    Some(RequestHead { method_is_get: method == "GET", target: target.to_string(), host })
+}
+
+/// Read up to the end of the request headers. `None` for anything that is not a complete, small
+/// HTTP/1.x request (idle pre-connections, probes, garbage): those are dropped without a reply.
+fn read_request_head(stream: &mut TcpStream) -> Option<RequestHead> {
+    stream.set_read_timeout(Some(Duration::from_secs(3))).ok()?;
+    let mut buf = Vec::with_capacity(1024);
+    let mut chunk = [0u8; 1024];
+    while !buf.windows(4).any(|w| w == b"\r\n\r\n") {
+        if buf.len() > 8192 {
+            return None;
+        }
+        match stream.read(&mut chunk) {
+            Ok(0) | Err(_) => return None,
+            Ok(n) => buf.extend_from_slice(&chunk[..n]),
+        }
+    }
+    parse_request_head(&buf)
+}
+
+fn write_response(stream: &mut TcpStream, status: u16, body: &str, csp: Option<&str>) {
+    let reason = match status {
+        200 => "OK",
+        400 => "Bad Request",
+        _ => "Not Found",
+    };
+    let mut head = format!(
+        "HTTP/1.1 {status} {reason}\r\nCache-Control: no-store\r\nReferrer-Policy: no-referrer\r\n\
+         Content-Type: text/html; charset=utf-8\r\nContent-Length: {}\r\nConnection: close\r\n",
+        body.len()
+    );
+    if let Some(csp) = csp {
+        head.push_str(&format!("Content-Security-Policy: {csp}\r\n"));
+    }
+    head.push_str("\r\n");
+    let sent = stream
+        .write_all(head.as_bytes())
+        .and_then(|_| stream.write_all(body.as_bytes()))
+        .and_then(|_| stream.flush());
+    if let Err(e) = sent {
+        log::warn!("[chatgpt] could not answer a loopback request: {e}");
+    }
+    let _ = stream.shutdown(Shutdown::Write);
+}
+
+type CallbackOutcome = Result<CallbackResult, ChatGptError>;
+
+fn serve_connection(
+    mut stream: TcpStream,
+    port: u16,
+    state: &str,
+    saved_client_id: Option<&str>,
+    outcome: &mpsc::Sender<CallbackOutcome>,
+) {
+    let _ = stream.set_nonblocking(false);
+    let Some(head) = read_request_head(&mut stream) else {
+        log::debug!("[chatgpt] loopback connection closed without a complete request");
+        return;
+    };
+    let verdict = judge_callback(
+        head.method_is_get,
+        head.host.as_deref(),
+        &head.target,
+        port,
+        state,
+        saved_client_id,
+    );
+    // Only the path is logged, never the query (it carries the one-time code).
+    let path_only = head.target.split('?').next().unwrap_or("");
+    match verdict {
+        CallbackVerdict::Ignore => {
+            log::info!("[chatgpt] loopback request {path_only} ignored (host {:?})", head.host);
+            write_response(&mut stream, 404, "Not found", None);
+        }
+        CallbackVerdict::BadState => {
+            log::info!("[chatgpt] loopback request {path_only} rejected: state mismatch");
+            write_response(
+                &mut stream,
+                400,
+                "Invalid sign-in state. Return to the browser tab that started sign-in.",
+                None,
+            );
+        }
+        CallbackVerdict::Done(result) => {
+            match &result {
+                Ok(_) => log::info!("[chatgpt] loopback callback received"),
+                Err(e) => log::warn!("[chatgpt] loopback callback carried error {}", e.code),
+            }
+            let (html, csp) = callback_page();
+            write_response(&mut stream, 200, &html, Some(&csp));
+            let _ = outcome.send(result);
+        }
     }
 }
 
-/// Blocks (call from `spawn_blocking`) until the browser returns to the loopback listener.
+const MAX_OPEN_CONNECTIONS: usize = 32;
+
+/// Blocks (call from `spawn_blocking`) until the browser returns to the loopback listener. Every
+/// connection is served on its own thread, so an idle pre-connection cannot delay the real callback,
+/// and no single connection can stop the listener.
 fn wait_for_callback(
-    server: tiny_http::Server,
+    listener: TcpListener,
     port: u16,
     state: String,
     saved_client_id: Option<String>,
     cancel: Arc<AtomicBool>,
 ) -> Result<CallbackResult, ChatGptError> {
     let deadline = Instant::now() + SIGN_IN_TIMEOUT;
+    let (tx, rx) = mpsc::channel::<CallbackOutcome>();
+    let state: Arc<str> = state.into();
+    let saved_client_id: Option<Arc<str>> = saved_client_id.map(Into::into);
+    let open = Arc::new(AtomicUsize::new(0));
     loop {
         if cancel.load(Ordering::SeqCst) {
             return Err(ChatGptError::new("cancelled", "Sign-in was cancelled.", false));
@@ -313,51 +467,27 @@ fn wait_for_callback(
                 true,
             ));
         }
-        let request = match server.recv_timeout(Duration::from_millis(250)) {
-            Ok(Some(request)) => request,
-            Ok(None) => continue,
-            Err(e) => {
-                log::warn!("[chatgpt] sign-in listener failed: {e}");
-                return Err(ChatGptError::new(
-                    "callback_failed",
-                    "The local sign-in listener stopped. Please try again.",
-                    true,
-                ))
+        match listener.accept() {
+            Ok((stream, _)) => {
+                if open.fetch_add(1, Ordering::SeqCst) >= MAX_OPEN_CONNECTIONS {
+                    open.fetch_sub(1, Ordering::SeqCst);
+                    continue; // drop the connection
+                }
+                let (tx, state, saved, open) =
+                    (tx.clone(), state.clone(), saved_client_id.clone(), open.clone());
+                std::thread::spawn(move || {
+                    serve_connection(stream, port, &state, saved.as_deref(), &tx);
+                    open.fetch_sub(1, Ordering::SeqCst);
+                });
+                continue; // there may be more connections waiting
             }
-        };
-        let host = request
-            .headers()
-            .iter()
-            .find(|h| h.field.equiv("Host"))
-            .map(|h| h.value.as_str().to_string());
-        let verdict = judge_callback(
-            request.method() == &tiny_http::Method::Get,
-            host.as_deref(),
-            request.url(),
-            port,
-            &state,
-            saved_client_id.as_deref(),
-        );
-        let path_only = request.url().split('?').next().unwrap_or("").to_string();
-        match &verdict {
-            CallbackVerdict::Ignore => log::info!("[chatgpt] loopback request {path_only} ignored (host {host:?})"),
-            CallbackVerdict::BadState => log::info!("[chatgpt] loopback request {path_only} rejected: state mismatch"),
-            CallbackVerdict::Done(Ok(_)) => log::info!("[chatgpt] loopback callback received"),
-            CallbackVerdict::Done(Err(e)) => log::warn!("[chatgpt] loopback callback carried error {}", e.code),
+            Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {}
+            // A failed accept (e.g. a connection reset before it was accepted) must never end sign-in.
+            Err(e) => log::debug!("[chatgpt] loopback accept error ignored: {e}"),
         }
-        match verdict {
-            CallbackVerdict::Ignore => respond(request, 404, "Not found", None),
-            CallbackVerdict::BadState => respond(
-                request,
-                400,
-                "Invalid sign-in state. Return to the browser tab that started sign-in.",
-                None,
-            ),
-            CallbackVerdict::Done(result) => {
-                let (html, csp) = callback_page();
-                respond(request, 200, &html, Some(&csp));
-                return result;
-            }
+        // Doubles as the polling sleep between accept attempts.
+        if let Ok(result) = rx.recv_timeout(Duration::from_millis(50)) {
+            return result;
         }
     }
 }
@@ -529,8 +659,8 @@ pub async fn sign_in(
     let server = tauri::async_runtime::spawn_blocking(|| {
         let mut last = None;
         for _ in 0..10 {
-            match tiny_http::Server::http(("127.0.0.1", REDIRECT_PORT)) {
-                Ok(server) => return Ok(server),
+            match bind_listener(REDIRECT_PORT) {
+                Ok(listener) => return Ok(listener),
                 Err(e) => {
                     last = Some(e.to_string());
                     std::thread::sleep(Duration::from_millis(200));
@@ -562,6 +692,7 @@ pub async fn sign_in(
         code_challenge: &pkce_challenge(&verifier),
         login_hint: previous.and_then(|c| c.email.as_deref()),
         reconsent,
+        app_name: &registration_name(),
     })?;
     open_url(&url).map_err(|_| {
         ChatGptError::new(
@@ -747,12 +878,13 @@ mod tests {
             code_challenge: "c",
             login_hint: None,
             reconsent: true,
+            app_name: "TransKit (PC-1)",
         })
         .unwrap();
         let parsed = reqwest::Url::parse(&url).unwrap();
         let q: std::collections::HashMap<_, _> = parsed.query_pairs().into_owned().collect();
         assert_eq!(q["client_id"], PLACEHOLDER_CLIENT_ID);
-        assert_eq!(q["agent_name_hint"], APP_NAME);
+        assert_eq!(q["agent_name_hint"], "TransKit (PC-1)");
         assert_eq!(q["code_challenge_method"], "S256");
         assert_eq!(q["prompt"], "consent");
         assert_eq!(q["scope"], SCOPES);
@@ -771,6 +903,7 @@ mod tests {
             code_challenge: "c",
             login_hint: Some("a@b.c"),
             reconsent: false,
+            app_name: "TransKit (PC-1)",
         })
         .unwrap();
         assert!(url.contains("client_id=client_abc"));
@@ -914,8 +1047,8 @@ mod tests {
 
     #[test]
     fn loopback_listener_round_trip() {
-        let server = tiny_http::Server::http(("127.0.0.1", 0)).unwrap();
-        let port = server.server_addr().to_ip().unwrap().port();
+        let server = bind_listener(0).unwrap();
+        let port = server.local_addr().unwrap().port();
         let cancel = Arc::new(AtomicBool::new(false));
         let handle = std::thread::spawn(move || wait_for_callback(server, port, STATE.to_string(), None, cancel));
         let host = format!("127.0.0.1:{port}");
@@ -932,13 +1065,72 @@ mod tests {
 
     #[test]
     fn loopback_listener_can_be_cancelled() {
-        let server = tiny_http::Server::http(("127.0.0.1", 0)).unwrap();
-        let port = server.server_addr().to_ip().unwrap().port();
+        let server = bind_listener(0).unwrap();
+        let port = server.local_addr().unwrap().port();
         let cancel = Arc::new(AtomicBool::new(false));
         let flag = cancel.clone();
         let handle = std::thread::spawn(move || wait_for_callback(server, port, STATE.to_string(), None, flag));
         cancel.store(true, Ordering::SeqCst);
         assert_eq!(handle.join().unwrap().unwrap_err().code, "cancelled");
+    }
+
+    // Regression: with tiny_http, one connection that was reset right after being accepted panicked
+    // its accept thread and silently closed the port, so the browser's real callback was refused.
+    #[test]
+    fn listener_survives_bad_and_idle_connections() {
+        use std::io::Write;
+        let server = bind_listener(0).unwrap();
+        let port = server.local_addr().unwrap().port();
+        let cancel = Arc::new(AtomicBool::new(false));
+        let flag = cancel.clone();
+        let handle = std::thread::spawn(move || wait_for_callback(server, port, STATE.to_string(), None, flag));
+        let host = format!("127.0.0.1:{port}");
+
+        // Connect-and-drop probes, garbage, a truncated request and an idle pre-connection.
+        for _ in 0..20 {
+            drop(std::net::TcpStream::connect(("127.0.0.1", port)).unwrap());
+        }
+        let mut garbage = std::net::TcpStream::connect(("127.0.0.1", port)).unwrap();
+        garbage.write_all(b"\x16\x03\x01 not http at all\r\n\r\n").unwrap();
+        drop(garbage);
+        let mut truncated = std::net::TcpStream::connect(("127.0.0.1", port)).unwrap();
+        truncated.write_all(b"GET /auth/callback?code=abc&sta").unwrap();
+        drop(truncated);
+        let idle = std::net::TcpStream::connect(("127.0.0.1", port)).unwrap(); // kept open
+
+        std::thread::sleep(Duration::from_millis(300));
+        let started = Instant::now();
+        let page = http_get(port, "/auth/callback?code=abc&state=state-value&client_id=client_1", &host);
+        assert!(page.starts_with("HTTP/1.1 200"), "{page}");
+        assert!(started.elapsed() < Duration::from_secs(2), "an idle connection must not delay the callback");
+        assert_eq!(handle.join().unwrap().unwrap(), CallbackResult { code: "abc".into(), client_id: "client_1".into() });
+        drop(idle);
+    }
+
+    #[test]
+    fn request_head_parsing() {
+        let ok = parse_request_head(b"GET /auth/callback?x=1 HTTP/1.1\r\nhOsT:  127.0.0.1:1\r\nAccept: */*\r\n\r\n").unwrap();
+        assert_eq!(ok, RequestHead { method_is_get: true, target: "/auth/callback?x=1".into(), host: Some("127.0.0.1:1".into()) });
+        assert!(!parse_request_head(b"POST / HTTP/1.1\r\n\r\n").unwrap().method_is_get);
+        assert_eq!(parse_request_head(b"GET / HTTP/1.0\r\n\r\n").unwrap().host, None);
+        assert!(parse_request_head(b"GET / SPDY/3\r\n\r\n").is_none());
+        assert!(parse_request_head(b"GET /\r\n\r\n").is_none());
+        assert!(parse_request_head(b"\xff\xfe\r\n\r\n").is_none());
+    }
+
+    #[test]
+    fn registration_name_identifies_the_machine() {
+        assert_eq!(format_registration_name(Some("DEE-GB-R")), "TransKit (DEE-GB-R)");
+        assert_eq!(format_registration_name(Some("  my-mac.local\n")), "TransKit (my-mac.local)");
+        // Nothing usable -> plain app name.
+        assert_eq!(format_registration_name(None), "TransKit");
+        assert_eq!(format_registration_name(Some("   ")), "TransKit");
+        assert_eq!(format_registration_name(Some("<>&%")), "TransKit");
+        // Odd characters are dropped, length is bounded.
+        assert_eq!(format_registration_name(Some("PC<script>1")), "TransKit (PCscript1)");
+        let long = format_registration_name(Some(&"x".repeat(200)));
+        assert!(long.chars().count() <= MAX_APP_NAME_LEN, "{long}");
+        assert!(long.starts_with("TransKit (x") && long.ends_with(')'));
     }
 
     #[test]
