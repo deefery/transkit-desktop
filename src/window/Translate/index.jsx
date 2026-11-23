@@ -355,41 +355,39 @@ export default function Translate() {
                     backdropFilter: bgAlpha < 1 && osType !== 'Darwin' ? 'blur(24px) saturate(1.6)' : undefined,
                 }}
             >
-                {/* Drag region - positioned to not overlap buttons */}
-                {osType === 'Darwin' ? (
-                    // macOS: drag region in center, avoiding left (system buttons) and right (our buttons)
-                    <div
-                        className='fixed top-[5px] left-[80px] right-[80px] h-[30px]'
-                        data-tauri-drag-region='true'
-                    />
-                ) : (
-                    // Windows/Linux: drag region in center, avoiding sides
-                    <div
-                        className='fixed top-[5px] left-[80px] right-[80px] h-[30px]'
-                        data-tauri-drag-region='true'
-                    />
-                )}
+                {/*
+                    Title bar: the whole 32px row is the drag region (Tauri v1 only starts a drag when the
+                    mouse-down target itself carries data-tauri-drag-region, so every non-button wrapper
+                    inside the row carries it too and decorative children use pointer-events-none).
+                */}
+                <div
+                    className='group relative h-[32px] w-full flex justify-between cursor-grab active:cursor-grabbing'
+                    data-tauri-drag-region='true'
+                >
+                    {/* Drag handle: a visible hint that this bar moves the window */}
+                    <div className='absolute inset-x-0 top-0 h-full flex items-center justify-center pointer-events-none'>
+                        <div className='h-[4px] w-[36px] rounded-full bg-default-300/60 transition-colors group-hover:bg-default-400' />
+                    </div>
 
-                <div className={`h-[32px] w-full flex ${osType === 'Darwin' ? 'justify-between' : 'justify-between'}`}>
                     {/* Left side: Empty space on macOS (system buttons), Action buttons on Windows */}
-                    <div className='flex gap-1 items-center pl-1'>
+                    <div className='flex gap-1 items-center pl-1' data-tauri-drag-region='true'>
                         {osType === 'Darwin' ? (
                             // macOS: leave space for system buttons
-                            <div className='w-[70px]' />
+                            <div className='w-[70px]' data-tauri-drag-region='true' />
                         ) : (
                             // Windows: show action buttons on left
-                            <div id='translate-actions' className='flex gap-0.5'></div>
+                            <div id='translate-actions' className='flex gap-0.5' data-tauri-drag-region='true'></div>
                         )}
                     </div>
 
                     {/* Right side: Pin + Actions on macOS, Pin + Close on Windows */}
-                    <div className='flex gap-1 items-center pr-1'>
+                    <div className='flex gap-1 items-center pr-1' data-tauri-drag-region='true'>
                         {osType === 'Darwin' ? (
                             // macOS: show action buttons + pin on right
                             <>
-                                <div id='translate-actions' className='flex gap-0.5 items-center'>
+                                <div id='translate-actions' className='flex gap-0.5 items-center' data-tauri-drag-region='true'>
                                     {translateServiceInstanceList && translateServiceInstanceList[selectedProviderIndex] && (
-                                        <div className='flex items-center px-1.5 py-0.5 bg-content2/50 rounded-md mr-1'>
+                                        <div className='flex items-center px-1.5 py-0.5 bg-content2/50 rounded-md mr-1 pointer-events-none'>
                                             <img
                                                 src={
                                                     whetherPluginService(translateServiceInstanceList[selectedProviderIndex])
@@ -427,9 +425,9 @@ export default function Translate() {
                         ) : (
                             // Windows: show pin + close
                             <>
-                                <div className='flex gap-0.5 items-center'>
+                                <div className='flex gap-0.5 items-center' data-tauri-drag-region='true'>
                                     {translateServiceInstanceList && translateServiceInstanceList[selectedProviderIndex] && (
-                                        <div className='flex items-center px-1.5 py-0.5 bg-content2/50 rounded-md mr-1'>
+                                        <div className='flex items-center px-1.5 py-0.5 bg-content2/50 rounded-md mr-1 pointer-events-none'>
                                             <img
                                                 src={
                                                     whetherPluginService(translateServiceInstanceList[selectedProviderIndex])
