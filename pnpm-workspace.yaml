@@ -1,0 +1,7 @@
+# Fork-only pnpm settings (pnpm is the authoritative lockfile; package-lock.json is kept for upstream).
+# pnpm 11 fails `pnpm install` on unreviewed dependency build scripts, so each one is decided here:
+# - esbuild: its postinstall only validates the platform binary that pnpm installs anyway; allowed.
+# - tesseract.js: its postinstall is an opencollective donation banner; not needed, denied.
+allowBuilds:
+  esbuild: true
+  tesseract.js: false

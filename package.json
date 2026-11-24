@@ -6,6 +6,7 @@
     "scripts": {
         "dev": "vite",
         "build": "vite build",
+        "test": "node --test --test-concurrency=1 \"src/**/*.test.js\"",
         "preview": "vite preview",
         "tauri": "tauri",
         "updater": "node updater/updater.mjs",
