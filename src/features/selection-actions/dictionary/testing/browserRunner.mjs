@@ -104,6 +104,10 @@ const readBody = (req) =>
 const USER_AGENT =
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36';
 
+// JSON placed inside an inline <script>: escaping every "<" keeps a value such as "</script>" or
+// "<!--" from ending or altering the script element; "<" parses back to the same string.
+export const inlineScriptJson = (value) => JSON.stringify(value).replace(/</g, '\\u003c');
+
 const decodeEntities = (text) =>
     text.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&');
 
@@ -149,8 +153,8 @@ async function runUnlocked({
 <script type="module">
 const out = document.getElementById('result');
 try {
-  const m = await import(${JSON.stringify('/' + module)});
-  out.textContent = JSON.stringify({ ok: true, value: await m.run(${JSON.stringify(args)}) });
+  const m = await import(${inlineScriptJson('/' + module)});
+  out.textContent = JSON.stringify({ ok: true, value: await m.run(${inlineScriptJson(args)}) });
 } catch (e) {
   out.textContent = JSON.stringify({ ok: false, error: String((e && e.stack) || e) });
 }
