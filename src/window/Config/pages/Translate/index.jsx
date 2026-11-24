@@ -27,6 +27,7 @@ export default function Translate() {
     const [closeOnBlur, setCloseOnBlur] = useConfig('translate_close_on_blur', true);
     const [alwaysOnTop, setAlwaysOnTop] = useConfig('translate_always_on_top', false);
     const [fixedProviders, setFixedProviders] = useConfig('selection_translate_fixed_providers', false);
+    const [autoFallback, setAutoFallback] = useConfig('translate_auto_fallback', true);
     const { t } = useTranslation();
 
     return (
@@ -298,6 +299,17 @@ export default function Translate() {
                                 setFixedProviders(v);
                             }}
                         />
+                    </div>
+                    <div className='config-item'>
+                        <h3 className='my-auto mx-0'>{t('config.translate.auto_fallback')}</h3>
+                        {autoFallback !== null && (
+                            <Switch
+                                isSelected={autoFallback}
+                                onValueChange={(v) => {
+                                    setAutoFallback(v);
+                                }}
+                            />
+                        )}
                     </div>
                     <div className='config-item'>
                         <h3 className='my-auto mx-0'>{t('config.translate.hide_source')}</h3>

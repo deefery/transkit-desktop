@@ -13,6 +13,8 @@ import { IoMdCheckmark } from 'react-icons/io';
 import LanguageArea from './components/LanguageArea';
 import SourceArea, { windowTypeAtom } from './components/SourceArea';
 import TargetArea from './components/TargetArea';
+import ProviderNotice from './components/ProviderNotice';
+import { useProviderFallback } from './useProviderFallback';
 import SelectionActionPalette from '../../features/selection-actions/SelectionActionPalette';
 import { useAtomValue } from 'jotai';
 import { getServiceName, whetherPluginService } from '../../utils/service_instance';
@@ -103,6 +105,13 @@ export default function Translate() {
     const [headerButtons, setHeaderButtons] = useState(null);
     const [selectedProviderIndex, setSelectedProviderIndex] = useState(0);
     const contentRef = useRef(null);
+    // F1: a failing provider hands over to the next one; tabs go through chooseProvider.
+    const { notice: providerNotice, chooseProvider, tryProvider } = useProviderFallback({
+        list: translateServiceInstanceList,
+        configMap: serviceInstanceConfigMap,
+        selectedIndex: selectedProviderIndex,
+        setSelectedIndex: setSelectedProviderIndex,
+    });
     const windowType = useAtomValue(windowTypeAtom);
     const [translateBgOpacity, setTranslateBgOpacity] = useConfig('translate_bg_opacity', 100);
     const rememberWindowSizeEnabled = normalizeBooleanConfig(rememberWindowSize, false);
@@ -532,6 +541,14 @@ export default function Translate() {
                                             </div>
                                         );
                                     })}
+                                {providerNotice && (
+                                    <ProviderNotice
+                                        notice={providerNotice}
+                                        configMap={serviceInstanceConfigMap}
+                                        pluginList={pluginList}
+                                        tryProvider={tryProvider}
+                                    />
+                                )}
                             </div>
 
                             {/* Provider Tabs - Always visible */}
@@ -561,7 +578,7 @@ export default function Translate() {
                                                                 : 'border-1 border-transparent hover:border-default-300'
                                                         }`}
                                                         onPress={() => {
-                                                            setSelectedProviderIndex(index);
+                                                            chooseProvider(index);
                                                         }}
                                                     >
                                                         <img
@@ -620,6 +637,14 @@ export default function Translate() {
                                             </div>
                                         );
                                     })}
+                                {providerNotice && (
+                                    <ProviderNotice
+                                        notice={providerNotice}
+                                        configMap={serviceInstanceConfigMap}
+                                        pluginList={pluginList}
+                                        tryProvider={tryProvider}
+                                    />
+                                )}
                             </div>
 
                             {/* Provider Tabs - Show on hover or always (based on config) */}
@@ -629,7 +654,7 @@ export default function Translate() {
                                     const config = serviceInstanceConfigMap[key] ?? {};
                                     return config['enable'] ?? true;
                                 }).length > 1 && (
-                                    <div className={`absolute bottom-0 left-0 right-0 ${fixedProviders ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity duration-200 pt-1.5 pb-1`}>
+                                    <div className={`absolute bottom-0 left-0 right-0 ${fixedProviders || providerNotice ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity duration-200 pt-1.5 pb-1`}>
                                         <div className='flex justify-center'>
                                             <div className='flex gap-1 items-center bg-content2/80 backdrop-blur-sm rounded-lg p-1 border border-content3'>
                                             {translateServiceInstanceList.map((serviceInstanceKey, index) => {
@@ -650,7 +675,7 @@ export default function Translate() {
                                                                 : 'border-1 border-transparent hover:border-default-300'
                                                         }`}
                                                         onPress={() => {
-                                                            setSelectedProviderIndex(index);
+                                                            chooseProvider(index);
                                                         }}
                                                     >
                                                         <img

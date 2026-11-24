@@ -157,6 +157,7 @@
         "close_on_blur": "Close window when focus lost",
         "always_on_top": "Always on Top",
         "fixed_providers": "Always Show Providers (Quick Translate)",
+        "auto_fallback": "Switch to the Next Service When One Fails",
         "hide_source": "Hide Source Area",
         "hide_language": "Hide Language Area",
         "hide_window": "Hide Translation Window",
@@ -1180,7 +1181,29 @@
       "loading": "Translating...",
       "show_other_translations": "View other translations",
       "hide_other_translations": "Hide other translations",
-      "input_placeholder": "Enter text to translate..."
+      "input_placeholder": "Enter text to translate...",
+      "fallback": {
+        "switched": "{{from}}: {{reason}}. Showing {{to}} instead.",
+        "cooling": "{{from}} failed recently. Showing {{to}}.",
+        "try": "Try {{name}}",
+        "open_settings": "Open Settings",
+        "reason": {
+          "rate-limit": "too many requests",
+          "auth": "key rejected",
+          "timeout": "timed out",
+          "network": "network error",
+          "unsupported-language": "language not supported",
+          "service": "service unavailable"
+        },
+        "hint": {
+          "rate-limit": "{{name}} is getting too many requests. Wait a moment or use another service.",
+          "auth": "{{name}} rejected the API key. Check it in Settings → Service.",
+          "timeout": "{{name}} took too long to answer. Check your network or proxy.",
+          "network": "Could not reach {{name}}. Check your network or proxy.",
+          "unsupported-language": "{{name}} does not support this language pair.",
+          "service": "{{name}} is unavailable right now. Try again later or use another service."
+        }
+      }
     },
     "recognize": {
       "recognize": "Recognize",

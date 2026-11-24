@@ -155,7 +155,7 @@ describe('view states (loading / error / speaking) and safe text', () => {
         assert.match(html, /Translating…/);
     });
 
-    test('provider errors and notices render as escaped text, never as HTML', () => {
+    test('notices render as escaped text, never as HTML; a translation error is not repeated here', () => {
         const evil = '<img src=x onerror=alert(1)>';
         const html = view({
             ctx: baseCtx({ status: 'error', error: evil }),
@@ -163,7 +163,9 @@ describe('view states (loading / error / speaking) and safe text', () => {
         });
         assert.doesNotMatch(html, /<img/);
         assert.match(html, /&lt;img src=x onerror=alert\(1\)&gt;/);
-        assert.match(html, /Translation failed\./);
+        // The result card and the provider notice (F1) already show the translation error.
+        assert.doesNotMatch(html, /Translation failed\./);
+        assert.equal(html.split('onerror=alert').length - 1, 1, 'only the notice carries the text');
     });
 
     test('notice codes are shown through i18n, falling back to the English message', () => {

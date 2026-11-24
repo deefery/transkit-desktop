@@ -151,6 +151,7 @@
         "close_on_blur": "失去焦点时关闭窗口",
         "always_on_top": "窗口默认置顶",
         "fixed_providers": "始终显示服务提供者（快速翻译）",
+        "auto_fallback": "服务失败时自动换用下一个",
         "hide_source": "隐藏原文",
         "hide_language": "隐藏语言栏",
         "hide_window": "隐藏翻译窗口",
@@ -1027,7 +1028,29 @@
       "loading": "翻译中...",
       "show_other_translations": "查看其他翻译",
       "hide_other_translations": "隐藏其他翻译",
-      "input_placeholder": "输入要翻译的文字..."
+      "input_placeholder": "输入要翻译的文字...",
+      "fallback": {
+        "switched": "{{from}}：{{reason}}，已改用 {{to}}。",
+        "cooling": "{{from}} 刚才失败过，先用 {{to}}。",
+        "try": "试试 {{name}}",
+        "open_settings": "打开设置",
+        "reason": {
+          "rate-limit": "请求过多",
+          "auth": "密钥被拒绝",
+          "timeout": "超时",
+          "network": "网络错误",
+          "unsupported-language": "不支持该语言",
+          "service": "服务不可用"
+        },
+        "hint": {
+          "rate-limit": "{{name}} 请求过多，请稍候或换用其他服务。",
+          "auth": "{{name}} 拒绝了 API 密钥，请在 设置 → 服务 中检查。",
+          "timeout": "{{name}} 响应超时，请检查网络或代理。",
+          "network": "无法连接 {{name}}，请检查网络或代理。",
+          "unsupported-language": "{{name}} 不支持这个语言对。",
+          "service": "{{name}} 暂时不可用，请稍后重试或换用其他服务。"
+        }
+      }
     },
     "recognize": {
       "recognize": "重新识别",

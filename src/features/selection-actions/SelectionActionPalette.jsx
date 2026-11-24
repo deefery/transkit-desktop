@@ -612,7 +612,8 @@ export function SelectionActionPaletteView({
                 </span>
             )}
 
-            {(translation.status === 'loading' || translation.status === 'error' || notice) && (
+            {/* A translation error is shown by the result card and the provider notice (F1), not again here. */}
+            {(translation.status === 'loading' || notice) && (
                 <div
                     className='flex flex-col gap-0.5 text-[11px]'
                     role='status'
@@ -620,14 +621,6 @@ export function SelectionActionPaletteView({
                 >
                     {translation.status === 'loading' && (
                         <span className='text-default-500'>{t('selection_actions.translating')}</span>
-                    )}
-                    {translation.status === 'error' && translation.error !== '' && (
-                        <span
-                            className='text-danger break-words line-clamp-2'
-                            title={translation.error}
-                        >
-                            {message('translation-failed')} {translation.error}
-                        </span>
                     )}
                     {notice && (
                         <span
