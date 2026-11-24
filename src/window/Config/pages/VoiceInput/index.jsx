@@ -9,6 +9,7 @@ import { getServiceName } from '../../../../utils/service_instance';
 import { store } from '../../../../utils/store';
 import { VOICE_INPUT_TARGET_LANGUAGES, normalizeVoiceLanguageToAppKey } from '../../../../utils/voiceLanguage';
 import * as builtinTranscriptionServices from '../../../../services/transcription';
+import { isServiceAvailable } from '../../../../lib/cloud_flag';
 
 function getTranscriptionServiceLabel(instanceKey, t) {
     const serviceName = getServiceName(instanceKey);
@@ -204,6 +205,7 @@ export default function VoiceInput() {
                             {Object.keys(builtinTranscriptionServices)
                                 .filter((name) =>
                                     builtinTranscriptionServices[name].info?.voiceInputOnly &&
+                                    isServiceAvailable(name) &&
                                     !(transcriptionServiceList ?? []).some((k) => getServiceName(k) === name)
                                 )
                                 .map((name) => (

@@ -2,7 +2,7 @@ import { Store } from 'tauri-plugin-store-api';
 import { appConfigDir, join } from '@tauri-apps/api/path';
 import { watch } from 'tauri-plugin-fs-watch-api';
 import { invoke } from '@tauri-apps/api';
-import { seedConfigDefaults } from './config_defaults';
+import { pruneUnavailableCloudServices, seedConfigDefaults } from './config_defaults';
 
 export let store = new Store();
 
@@ -15,7 +15,10 @@ export async function initStore() {
     // Write the canonical defaults (service lists, languages, history, active services) before
     // React renders, so a new user's settings do not depend on which window reads a key first.
     // See config_defaults.js.
-    if (await seedConfigDefaults(store)) await store.save();
+    // A build without Transkit Cloud also drops cloud services left in the user's lists.
+    const pruned = await pruneUnavailableCloudServices(store);
+    const seeded = await seedConfigDefaults(store);
+    if (pruned || seeded) await store.save();
 
     // Do NOT await watch() — on Windows, watching a non-existent file can hang the promise
     // indefinitely, blocking React from rendering. Fire-and-forget is safe here since the

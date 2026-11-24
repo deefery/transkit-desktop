@@ -4,6 +4,7 @@ import React from 'react';
 
 import * as builtinServices from '../../../../../../services/translate';
 import { createServiceInstanceKey } from '../../../../../../utils/service_instance';
+import { isServiceAvailable } from '../../../../../../lib/cloud_flag';
 
 // Global services - shown by default
 const globalServices = [
@@ -46,7 +47,7 @@ export default function SelectModal(props) {
 
     const renderServiceButton = (serviceName, onClose) => {
         const service = builtinServices[serviceName];
-        if (!service) return null;
+        if (!service || !isServiceAvailable(serviceName)) return null;
 
         return (
             <div key={serviceName}>

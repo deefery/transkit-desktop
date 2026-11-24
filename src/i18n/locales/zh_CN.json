@@ -274,6 +274,7 @@
         "title": "账号",
         "profile_title": "个人资料",
         "not_signed_in": "未登录",
+        "local_profile": "仅保存在本机",
         "sign_in_description": "登录后可在多台设备间同步个人资料和数据。",
         "plan_section_title": "Transkit Cloud",
         "plan_badge_trial": "免费试用",

@@ -229,7 +229,8 @@ export default function Monitor() {
     // ── PTT VA embed ──────────────────────────────────────────────────────────
     // Resolve the effective STT key for PTT: Cloud STT auto-routes to Cloud Dictation
     const narrationSttKey = useMemo(() => {
-        if (!activeTranscriptionService) return 'transkit_cloud_stt';
+        // Without cloud there is no implicit fallback; an empty key reports "no STT configured".
+        if (!activeTranscriptionService) return CLOUD_ENABLED ? 'transkit_cloud_stt' : '';
         return getServiceName(activeTranscriptionService) === 'transkit_cloud_stt'
             ? 'transkit_cloud_dictation'
             : activeTranscriptionService;

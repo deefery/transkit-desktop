@@ -13,6 +13,7 @@ import { createClient, type SupabaseClient, type Session, type User } from '@sup
 import { listen } from '@tauri-apps/api/event'
 import { open as openBrowser } from '@tauri-apps/api/shell'
 import { invoke } from '@tauri-apps/api/tauri'
+import { CLOUD_ENABLED } from './cloud_flag'
 
 // ─── Cloud feature flag ────────────────────────────────────────────────────────
 
@@ -23,9 +24,9 @@ const _key = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
  * True when Supabase credentials were present at build time and cloud has not
  * been explicitly disabled via VITE_DISABLE_CLOUD=true.
  * All functions in this module are no-ops / return null when false.
+ * Computed in cloud_flag.js so config code can share it without loading Supabase.
  */
-export const CLOUD_ENABLED: boolean =
-  import.meta.env.VITE_DISABLE_CLOUD !== 'true' && !!_url && !!_key
+export { CLOUD_ENABLED }
 
 // ─── Supabase client (null when cloud is disabled) ────────────────────────────
 

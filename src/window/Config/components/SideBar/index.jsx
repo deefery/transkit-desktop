@@ -11,7 +11,7 @@ import { AiFillAppstore, AiFillCloud } from 'react-icons/ai';
 import { MdKeyboardAlt, MdExtension, MdHeadset, MdPerson, MdMic, MdMemory } from 'react-icons/md';
 import { FaHistory } from 'react-icons/fa';
 
-import { getUser, onAuthStateChange } from '../../../../lib/transkit-cloud';
+import { CLOUD_ENABLED, getUser, onAuthStateChange } from '../../../../lib/transkit-cloud';
 import { useConfig } from '../../../../hooks';
 
 // Navigation configuration with sections
@@ -153,7 +153,11 @@ function AccountWidget({ navigate }) {
                     <p className="text-[13px] font-medium truncate text-foreground">
                         {localName || t('config.account.profile_title')}
                     </p>
-                    <p className="text-[11px] text-default-400 truncate">{t('config.account.not_signed_in')}</p>
+                    <p className="text-[11px] text-default-400 truncate">
+                        {CLOUD_ENABLED
+                            ? t('config.account.not_signed_in')
+                            : t('config.account.local_profile', { defaultValue: 'Stored on this device' })}
+                    </p>
                 </div>
             </button>
         );

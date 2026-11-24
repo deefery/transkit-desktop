@@ -4,6 +4,7 @@ import React from 'react';
 
 import { createServiceInstanceKey } from '../../../../../../utils/service_instance';
 import * as builtinServices from '../../../../../../services/tts';
+import { isServiceAvailable } from '../../../../../../lib/cloud_flag';
 
 export default function SelectModal(props) {
     const { isOpen, onOpenChange, setCurrentConfigKey, onConfigOpen } = props;
@@ -20,7 +21,7 @@ export default function SelectModal(props) {
                     <>
                         <ModalHeader>{t('config.service.add_service')}</ModalHeader>
                         <ModalBody>
-                            {Object.keys(builtinServices).map((x) => {
+                            {Object.keys(builtinServices).filter((x) => isServiceAvailable(x)).map((x) => {
                                 return (
                                     <div key={x}>
                                         <Button
