@@ -889,3 +889,14 @@ button[data-variant="light"][class*="danger"]:hover {
 .dark [data-slot="item"][class*="pagination"][data-active="true"] {
     background: linear-gradient(135deg, #0ea5e9, #06b6d4);
 }
+
+/* Selection panel action row: below 340px the buttons show icons only; each keeps its label as the
+   accessible name and tooltip (src/features/selection-actions/SelectionActionPalette.jsx). */
+.sa-action-row {
+    container-type: inline-size;
+}
+@container (max-width: 339px) {
+    .sa-action-row .sa-label {
+        display: none;
+    }
+}

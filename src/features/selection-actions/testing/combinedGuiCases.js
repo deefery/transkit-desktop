@@ -59,7 +59,17 @@ export async function run() {
     await waitFor(() => button('Dictionary') && button('Analyze sentence'), 'palette');
     await waitFor(() => !button('Analyze sentence').disabled, 'AI service available');
 
-    // Keyboard: ArrowRight walks the first toolbar, including past the Tooltip-wrapped favorites editor.
+    // The action row is a single row at this width (420px body).
+    const row = document.querySelector('[data-testid="selection-primary-actions"]');
+    const rowButtons = [...row.querySelectorAll('button')];
+    const rowTops = new Set(rowButtons.map((b) => Math.round(b.getBoundingClientRect().top)));
+    const actionRow = {
+        labels: rowButtons.map(labelOf),
+        rows: rowTops.size,
+        overflowsRow: rowButtons.some((b) => b.getBoundingClientRect().right > row.getBoundingClientRect().right + 1),
+    };
+
+    // Keyboard: ArrowRight walks the action row and wraps around.
     const toolbar = document.querySelector('[data-testid="selection-action-palette"] [role="toolbar"]');
     toolbar.querySelector('button').focus();
     const walk = [labelOf(document.activeElement)];
@@ -73,28 +83,65 @@ export async function run() {
     await sleep(30);
     const afterLeft = labelOf(document.activeElement);
 
-    // Dictionary + AI result next to each other.
-    button('Dictionary').click();
-    await waitFor(() => document.querySelector('[data-testid="dictionary-result"]'), 'dictionary result');
-    button('Analyze sentence').click();
-    await waitFor(() => document.querySelector('[data-testid="ai-output"]'), 'AI output');
-    await sleep(100);
-    const aiOutput = document.querySelector('[data-testid="ai-output"]');
-    const dictResult = document.querySelector('[data-testid="dictionary-result"]');
+    const q = (id) => document.querySelector(`[data-testid="${id}"]`);
     const box = (el) => ({
         overflowY: getComputedStyle(el).overflowY,
         maxHeight: getComputedStyle(el).maxHeight,
         clientHeight: el.clientHeight,
         scrollHeight: el.scrollHeight,
     });
+
+    // Dictionary first, then an AI action: the newer AI result is expanded, the dictionary folds.
+    button('Dictionary').click();
+    await waitFor(() => q('dictionary-result'), 'dictionary result');
+    button('Analyze sentence').click();
+    await waitFor(() => q('ai-output'), 'AI output');
+    await sleep(100);
+    const afterBoth = {
+        aiExpanded: Boolean(q('ai-result')),
+        dictionaryCollapsed: Boolean(q('dictionary-panel-collapsed')) && !q('dictionary-panel'),
+        collapsedText: textOf(q('dictionary-panel-collapsed')),
+    };
+    const aiOutputBox = box(q('ai-output'));
+    const aiText = textOf(q('ai-output'));
+
+    // Expanding the folded dictionary folds the AI result instead.
+    q('dictionary-panel-collapsed').click();
+    await waitFor(() => q('dictionary-result'), 'dictionary expanded again');
+    await sleep(50);
+    const afterExpand = {
+        dictionaryExpanded: Boolean(q('dictionary-panel')),
+        aiCollapsed: Boolean(q('ai-result-collapsed')) && !q('ai-result'),
+    };
+
+    // Slot: having run Analyze sentence, it stays in the slot (it is the recent AI action).
+    const slotLabel = labelOf(q('ai-slot'));
+
+    // Narrow window (320px): the row turns icon-only and still fits one row.
+    const dictionaryBox = box(q('dictionary-result'));
+    document.body.style.width = '320px';
+    await sleep(300);
+    const narrowButtons = [...row.querySelectorAll('button')];
+    const narrowRow = {
+        width: Math.round(row.getBoundingClientRect().width),
+        labels: narrowButtons.map(labelOf),
+        visibleText: narrowButtons.map((b) => b.innerText.trim()),
+        rows: new Set(narrowButtons.map((b) => Math.round(b.getBoundingClientRect().top))).size,
+        overflowsRow: narrowButtons.some((b) => b.getBoundingClientRect().right > row.getBoundingClientRect().right + 1),
+    };
+
     return {
+        actionRow,
         walk,
         afterLeft,
-        bothPanels: Boolean(document.querySelector('[data-testid="dictionary-panel"]') && document.querySelector('[data-testid="ai-result"]')),
-        aiOutputBox: box(aiOutput),
-        dictionaryBox: box(dictResult),
-        aiText: textOf(aiOutput),
-        dictionarySource: textOf(document.querySelector('[data-testid="dictionary-source"]')),
+        afterBoth,
+        afterExpand,
+        slotLabel,
+        narrowRow,
+        aiOutputBox,
+        dictionaryBox,
+        aiText,
+        dictionarySource: textOf(q('dictionary-source')),
         horizontalOverflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
     };
 }

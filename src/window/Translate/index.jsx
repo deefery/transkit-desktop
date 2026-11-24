@@ -504,11 +504,6 @@ export default function Translate() {
                         <Spacer y={1} />
                     </div>
 
-                    {/* Selection actions (selection Translate window only) */}
-                    {windowType === '[SELECTION_TRANSLATE]' && serviceInstanceConfigMap !== null && (
-                        <SelectionActionPalette serviceInstanceConfigMap={serviceInstanceConfigMap} />
-                    )}
-
                     {/* Translation Results Section - Different layout based on window type */}
                     {windowType === '[INPUT_TRANSLATE]' ? (
                         // INPUT mode: Tabs always visible at bottom
@@ -679,6 +674,14 @@ export default function Translate() {
                                         </div>
                                     </div>
                                 )}
+                        </div>
+                    )}
+
+                    {/* Selection actions (selection Translate window only), below the result:
+                        the translation stays on the first screen (docs/fork/u0-selection-panel-design.md) */}
+                    {windowType === '[SELECTION_TRANSLATE]' && serviceInstanceConfigMap !== null && (
+                        <div className='pt-1' data-testid='selection-actions-below-result'>
+                            <SelectionActionPalette serviceInstanceConfigMap={serviceInstanceConfigMap} />
                         </div>
                     )}
                 </div>

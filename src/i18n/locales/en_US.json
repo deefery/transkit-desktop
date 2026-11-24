@@ -1222,6 +1222,7 @@
       "stop_speaking": "Stop speaking",
       "translating": "Translating…",
       "edit_favorites": "Edit favorite languages",
+      "more": "More",
       "add_language": "Add language",
       "move_up": "Move up",
       "move_down": "Move down",
@@ -1238,6 +1239,7 @@
       },
       "ai": {
         "toolbar": "AI actions",
+        "set_up": "Set up AI",
         "service": "AI service",
         "choose_service": "Choose AI service",
         "result": "AI result",

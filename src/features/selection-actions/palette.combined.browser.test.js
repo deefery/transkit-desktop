@@ -30,23 +30,45 @@ describe('combined palette (headless Edge)', { skip }, () => {
         requests = run.requests;
     });
 
-    test('ArrowRight walks the toolbar past the Tooltip-wrapped favorites editor to Dictionary and Speak original, wraps over the disabled Speak translation, ArrowLeft goes back', () => {
+    test('the action row is one row: speak original, dictionary, the AI slot, more', () => {
+        assert.deepEqual(out.actionRow.labels, ['Speak original', 'Dictionary', 'Analyze sentence', 'More']);
+        assert.equal(out.actionRow.rows, 1);
+        assert.equal(out.actionRow.overflowsRow, false);
+    });
+
+    test('at 320px the action row is icon-only (labels kept as accessible names) and still one row', () => {
+        assert.ok(out.narrowRow.width < 340, `row width ${out.narrowRow.width}px`);
+        assert.deepEqual(out.narrowRow.labels, ['Speak original', 'Dictionary', 'Analyze sentence', 'More']);
+        assert.deepEqual(out.narrowRow.visibleText, ['', '', '', '']);
+        assert.equal(out.narrowRow.rows, 1);
+        assert.equal(out.narrowRow.overflowsRow, false);
+    });
+
+    test('ArrowRight walks the action row and wraps around, ArrowLeft goes back', () => {
         assert.deepEqual(out.walk.slice(0, 9), [
-            'Simplified Chinese',
-            'English',
-            'Japanese',
-            'Spanish',
-            'Edit favorite languages',
-            'Dictionary',
             'Speak original',
-            'Simplified Chinese',
-            'English',
+            'Dictionary',
+            'Analyze sentence',
+            'More',
+            'Speak original',
+            'Dictionary',
+            'Analyze sentence',
+            'More',
+            'Speak original',
         ]);
         assert.equal(out.afterLeft, out.walk[7]);
     });
 
-    test('Dictionary and an AI action show side by side, each from its own real request', () => {
-        assert.equal(out.bothPanels, true);
+    test('with Dictionary and an AI action both open, the newer one is expanded and the other folds to a line', () => {
+        assert.equal(out.afterBoth.aiExpanded, true);
+        assert.equal(out.afterBoth.dictionaryCollapsed, true);
+        assert.match(out.afterBoth.collapsedText, /Dictionary.*resilience/);
+        assert.equal(out.afterExpand.dictionaryExpanded, true);
+        assert.equal(out.afterExpand.aiCollapsed, true);
+        assert.equal(out.slotLabel, 'Analyze sentence');
+    });
+
+    test('Dictionary and the AI action each come from their own real request', () => {
         assert.equal(out.dictionarySource, 'Source: Cambridge Dictionary');
         assert.equal(requests.filter((r) => r.url.startsWith('https://dictionary.cambridge.org/')).length, 1);
         assert.equal(requests.filter((r) => r.url.startsWith('https://llm.one.test/')).length, 1);

@@ -3,6 +3,7 @@
 // This checks markup, state mapping, accessibility attributes and safe text rendering; pointer /
 // focus behaviour in a real webview is covered by the browser harness and native checks.
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { createStore, Provider } from 'jotai';
@@ -26,7 +27,7 @@ after(() => p.loader.close());
 
 function render(store) {
     return renderToStaticMarkup(
-        createElement(Provider, { store }, createElement(Palette, { serviceInstanceConfigMap: {} }))
+        createElement(Provider, { store }, createElement(Palette, { serviceInstanceConfigMap: {}, defaultMoreOpen: true }))
     );
 }
 
@@ -46,19 +47,32 @@ const button = (html, label) => {
 };
 
 describe('palette markup from the live context', () => {
-    test('selection window: toolbar with default favorites, active one pressed, speak actions present', () => {
+    test('selection window: one action row (speak original, dictionary, AI slot, more); the rest is under More', () => {
         const html = render(selectionStore({ target: 'ja' }));
-        assert.match(html, /role="toolbar"/);
-        assert.match(html, /aria-label="Selection actions"/);
-        for (const name of ['Simplified Chinese', 'English', 'Japanese', 'Spanish']) {
-            assert.ok(button(html, name), `${name} chip`);
+        const row = html.match(/<div role="toolbar" aria-label="Selection actions"[^>]*data-testid="selection-primary-actions">(.*?)<\/div><div id="selection-more"/s)?.[1] ?? '';
+        assert.ok(row, 'action row');
+        const labels = [...row.matchAll(/<button[^>]*>(?:<svg.*?<\/svg>)?(.*?)<\/button>/gs)].map((m) => m[1].replace(/<[^>]+>/g, ''));
+        assert.deepEqual(labels.slice(0, 2), ['Speak original', 'Dictionary']);
+        assert.equal(labels.at(-1), 'More');
+        assert.equal(labels.length, 4, `action row buttons: ${labels.join(', ')}`);
+        // Speak translation (also in the title bar) and the favorites editor moved under More.
+        assert.doesNotMatch(row, /Speak translation|Edit favorite languages/);
+        const more = html.match(/data-testid="selection-more">(.*)$/s)?.[1] ?? '';
+        assert.ok(button(more, 'Speak translation'));
+        assert.ok(button(more, 'Edit favorite languages'));
+        // Favorite languages are no longer chips in the palette (they head the target language list).
+        for (const name of ['Simplified Chinese', 'Japanese', 'Spanish']) {
+            assert.equal(button(html, name), '', `${name} chip`);
         }
-        assert.match(button(html, 'Japanese'), /aria-pressed="true"/);
-        assert.match(button(html, 'English'), /aria-pressed="false"/);
-        assert.ok(button(html, 'Speak original'));
-        assert.ok(button(html, 'Speak translation'));
-        assert.doesNotMatch(button(html, 'English'), /disabled/);
         assert.doesNotMatch(button(html, 'Speak original'), /disabled/);
+    });
+
+    test('More is collapsed by default', () => {
+        const html = renderToStaticMarkup(
+            createElement(Provider, { store: selectionStore() }, createElement(Palette, { serviceInstanceConfigMap: {} }))
+        );
+        assert.match(html, /data-testid="selection-more-toggle"[^>]*aria-expanded="false"|aria-expanded="false"[^>]*data-testid="selection-more-toggle"/);
+        assert.doesNotMatch(html, /data-testid="selection-more"/);
     });
 
     test('Speak translation is disabled (with a reason) until a current translation exists', () => {
@@ -70,9 +84,18 @@ describe('palette markup from the live context', () => {
 
     test('blank selection disables every action', () => {
         const html = render(selectionStore({ text: '   ' }));
-        for (const label of ['English', 'Japanese', 'Speak original', 'Speak translation']) {
+        for (const label of ['Speak original', 'Dictionary', 'Speak translation']) {
             assert.match(button(html, label), /disabled/, label);
         }
+    });
+
+    test('the Translate window places the selection palette after the translation result', () => {
+        const source = readFileSync(new URL('../../window/Translate/index.jsx', import.meta.url), 'utf8');
+        const results = source.indexOf('Translation Results Section');
+        const palette = source.indexOf('<SelectionActionPalette');
+        assert.ok(results > 0 && palette > 0, 'markers present');
+        assert.ok(palette > results, 'palette is rendered below the results section');
+        assert.equal(source.split('<SelectionActionPalette').length - 1, 1, 'rendered once');
     });
 
     test('input and image windows render no palette at all', () => {
@@ -113,6 +136,7 @@ describe('view states (loading / error / speaking) and safe text', () => {
     const view = (props) =>
         renderToStaticMarkup(
             createElement(View, {
+                defaultMoreOpen: true,
                 items,
                 ctx: baseCtx(),
                 activeSpeech: null,

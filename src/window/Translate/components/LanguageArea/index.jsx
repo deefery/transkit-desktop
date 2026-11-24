@@ -1,4 +1,13 @@
-import { Card, Button, CardFooter, Dropdown, DropdownMenu, DropdownTrigger, DropdownItem } from '@nextui-org/react';
+import {
+    Card,
+    Button,
+    CardFooter,
+    Dropdown,
+    DropdownMenu,
+    DropdownTrigger,
+    DropdownItem,
+    DropdownSection,
+} from '@nextui-org/react';
 import { useTranslation } from 'react-i18next';
 import { BiTransferAlt } from 'react-icons/bi';
 import React, { useEffect } from 'react';
@@ -8,6 +17,15 @@ import { languageList } from '../../../../utils/language';
 import { detectLanguageAtom } from '../SourceArea';
 import { useConfig } from '../../../../hooks';
 import { swapLanguage } from './swapLanguage';
+import {
+    DEFAULT_FAVORITE_LANGUAGES,
+    FAVORITE_LANGUAGES_CONFIG_KEY,
+    normalizeFavoriteLanguages,
+} from '../../../../features/selection-actions/favorites';
+
+// Favorites are listed again above the full list; their keys carry this prefix to stay unique.
+const FAVORITE_KEY_PREFIX = 'favorite:';
+const languageFromKey = (key) => String(key).replace(FAVORITE_KEY_PREFIX, '');
 
 export const sourceLanguageAtom = atom();
 export const targetLanguageAtom = atom();
@@ -17,6 +35,8 @@ export default function LanguageArea() {
     const [translateSourceLanguage, setTranslateSourceLanguage] = useConfig('translate_source_language', 'auto');
     const [translateTargetLanguage, setTranslateTargetLanguage] = useConfig('translate_target_language', 'zh_cn');
     const [translateSecondLanguage] = useConfig('translate_second_language', 'en');
+    const [storedFavorites] = useConfig(FAVORITE_LANGUAGES_CONFIG_KEY, DEFAULT_FAVORITE_LANGUAGES);
+    const favoriteLanguages = normalizeFavoriteLanguages(storedFavorites);
 
     const [sourceLanguage, setSourceLanguage] = useAtom(sourceLanguageAtom);
     const [targetLanguage, setTargetLanguage] = useAtom(targetLanguageAtom);
@@ -108,12 +128,22 @@ export default function LanguageArea() {
                             aria-label='Target Language'
                             className='max-h-[50vh] overflow-y-auto'
                             onAction={(key) => {
-                                setTargetLanguage(key);
+                                setTargetLanguage(languageFromKey(key));
                             }}
                         >
-                            {languageList.map((x) => {
-                                return <DropdownItem key={x}>{t(`languages.${x}`)}</DropdownItem>;
-                            })}
+                            <DropdownSection
+                                showDivider
+                                aria-label={t('selection_actions.edit_favorites')}
+                            >
+                                {favoriteLanguages.map((x) => (
+                                    <DropdownItem key={`${FAVORITE_KEY_PREFIX}${x}`}>{t(`languages.${x}`)}</DropdownItem>
+                                ))}
+                            </DropdownSection>
+                            <DropdownSection aria-label='All languages'>
+                                {languageList.map((x) => {
+                                    return <DropdownItem key={x}>{t(`languages.${x}`)}</DropdownItem>;
+                                })}
+                            </DropdownSection>
                         </DropdownMenu>
                     </Dropdown>
                 </div>

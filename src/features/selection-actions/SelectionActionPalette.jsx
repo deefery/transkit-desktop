@@ -2,7 +2,18 @@ import { Button, Dropdown, DropdownItem, DropdownMenu, DropdownTrigger, Tooltip 
 import { writeText } from '@tauri-apps/api/clipboard';
 import { HiOutlineVolumeUp } from 'react-icons/hi';
 import { LuSettings2 } from 'react-icons/lu';
-import { MdArrowDownward, MdArrowUpward, MdClose, MdContentCopy, MdEditNote, MdMenuBook } from 'react-icons/md';
+import {
+    MdArrowDownward,
+    MdArrowUpward,
+    MdAutoAwesome,
+    MdChevronRight,
+    MdClose,
+    MdContentCopy,
+    MdEditNote,
+    MdMenuBook,
+    MdMoreHoriz,
+} from 'react-icons/md';
+import { invoke } from '@tauri-apps/api/tauri';
 import PulseLoader from 'react-spinners/PulseLoader';
 import ReactMarkdown from 'react-markdown';
 import { useTranslation } from 'react-i18next';
@@ -20,7 +31,8 @@ import { CustomActionsEditor } from './CustomActionsEditor';
 import { CUSTOM_AI_ACTION_ID } from './customActions';
 import { OutputKind } from './aiActions';
 import { AiStatus } from './aiRunner';
-import { messageFor } from './registry';
+import { ActionCode, messageFor } from './registry';
+import { expandedPanel, pickAiSlotItem } from './panelLayout';
 import { DictionaryPanel } from './dictionary/DictionaryPanel';
 import { DictionaryStatus } from './dictionary/controller';
 import { useSelectionActions } from './useSelectionActions';
@@ -37,6 +49,9 @@ const arrowKeyHandler = (ref) => (event) => {
     const next = event.key === 'ArrowRight' ? index + 1 : index - 1;
     buttons[(next + buttons.length) % buttons.length]?.focus();
 };
+
+// "Set up AI" opens the Settings window (the user adds an AI service under Service -> AI).
+const openSettingsWindow = () => invoke('open_config_window');
 
 const NO_DICTIONARY = Object.freeze({
     state: { status: DictionaryStatus.IDLE },
@@ -58,227 +73,329 @@ export function SelectionActionPaletteView({
     updateFavorites,
     ai = null,
     custom = null,
+    aiSlot = null,
+    defaultMoreOpen = false,
+    openSettings = openSettingsWindow,
 }) {
     const { t } = useTranslation();
     const toolbarRef = useRef(null);
+    const moreToolbarRef = useRef(null);
     const aiToolbarRef = useRef(null);
     const customToolbarRef = useRef(null);
     const [editing, setEditing] = useState(false);
     const [managingCustom, setManagingCustom] = useState(false);
+    const [moreOpen, setMoreOpen] = useState(defaultMoreOpen);
 
     const message = (code, fallback) =>
         t(`selection_actions.messages.${code}`, { defaultValue: fallback ?? messageFor(code) });
     const languageName = (language) => t(`languages.${language}`);
 
-    const onKeyDown = arrowKeyHandler(toolbarRef);
-
-    const translateItems = items.filter((x) => x.group === 'translate');
-    const dictionaryItems = items.filter((x) => x.group === 'dictionary');
-    const speakItems = items.filter((x) => x.group === 'speak');
+    const dictionaryItem = items.find((x) => x.group === 'dictionary');
+    const speakOriginalItem = items.find((x) => x.actionId === 'speak_original');
+    const speakTranslationItem = items.find((x) => x.actionId === 'speak_translation');
     const analysisItem = items.find((x) => x.actionId === 'sentence_analysis');
     const improveItems = items.filter((x) => x.actionId === 'improve_writing');
     const customItems = items.filter((x) => x.actionId === CUSTOM_AI_ACTION_ID);
+    const slotItem = ai ? pickAiSlotItem(items, aiSlot ?? undefined) : null;
+    const aiUnconfigured = Boolean(ai) && (ai.instances?.length ?? 0) === 0;
     const translation = ctx.translation;
+
+    // Every AI action that runs becomes the slot's "recent" action.
+    const runAi = (item) => {
+        aiSlot?.remember?.(item.key);
+        return run(item.actionId, item.params);
+    };
+    const aiLabel = (item) => {
+        if (item.actionId === 'sentence_analysis') return t('selection_actions.sentence_analysis');
+        if (item.actionId === 'improve_writing') return t(`selection_actions.improve_presets.${item.params.preset}`);
+        return item.label;
+    };
+
+    // When both result panels are open, the one opened last is expanded and the other collapses to a
+    // single line (docs/fork/u0-selection-panel-design.md, section 3).
+    const dictionaryOpen = dictionary.state.status !== DictionaryStatus.IDLE;
+    const aiRequestId = ai?.result ? (ai.result.requestId ?? 'ai') : null;
+    const openCounter = useRef(0);
+    const [opened, setOpened] = useState({});
+    const [chosenPanel, setChosenPanel] = useState(null);
+    useEffect(() => {
+        setOpened((prev) => {
+            const { dictionary: _dictionary, ...rest } = prev;
+            return dictionaryOpen ? { ...rest, dictionary: prev.dictionary ?? ++openCounter.current } : rest;
+        });
+        if (dictionaryOpen) setChosenPanel(null);
+    }, [dictionaryOpen]);
+    useEffect(() => {
+        setOpened((prev) => {
+            const { ai: _ai, ...rest } = prev;
+            return aiRequestId !== null ? { ...rest, ai: ++openCounter.current } : rest;
+        });
+        if (aiRequestId !== null) setChosenPanel(null);
+    }, [aiRequestId]);
+    const bothOpen = dictionaryOpen && aiRequestId !== null;
+    const expanded = bothOpen ? expandedPanel(opened, chosenPanel) : null;
+    const aiCollapsed = bothOpen && expanded === 'dictionary';
+    const dictionaryCollapsed = bothOpen && expanded === 'ai';
+
+    // Action-row labels: always the accessible name and tooltip; the visible text is hidden by a
+    // container query when the row is narrower than 340px (style.css, .sa-action-row).
+    const label = (text) => <span className='sa-label'>{text}</span>;
+
+    const speakButton = (item, kind) => {
+        const speaking = activeSpeech?.kind === kind;
+        const text = t(`selection_actions.${item.actionId}`);
+        let title;
+        if (!item.enabled) title = message(item.code, item.reason);
+        else if (speaking) title = t('selection_actions.stop_speaking');
+        else title = text;
+        return (
+            <Button
+                key={item.key}
+                size='sm'
+                radius='sm'
+                variant={speaking ? 'solid' : 'flat'}
+                color={speaking ? 'primary' : 'default'}
+                aria-pressed={speaking}
+                aria-label={text}
+                isDisabled={!item.enabled}
+                title={title}
+                className='h-[24px] min-w-0 px-2 text-[12px]'
+                startContent={<HiOutlineVolumeUp className='text-[14px]' />}
+                onPress={() => run(item.actionId, item.params)}
+            >
+                {speaking && activeSpeech.phase === 'pending' ? (
+                    <PulseLoader
+                        size={3}
+                        color='currentColor'
+                        speedMultiplier={0.8}
+                    />
+                ) : (
+                    label(text)
+                )}
+            </Button>
+        );
+    };
+
+    const titleFor = (item, text) => (item.enabled ? text : message(item.code, item.reason));
 
     return (
         <div
             className='flex flex-col gap-1 pb-1'
             data-testid='selection-action-palette'
         >
+            {/* Action row: speak original, dictionary, AI slot, more. Always a single row. */}
             <div
                 ref={toolbarRef}
                 role='toolbar'
                 aria-label={t('selection_actions.toolbar')}
-                onKeyDownCapture={onKeyDown}
-                className='flex flex-wrap items-center gap-1'
+                onKeyDownCapture={arrowKeyHandler(toolbarRef)}
+                className='sa-action-row flex flex-nowrap items-center gap-1 overflow-hidden'
+                data-testid='selection-primary-actions'
             >
-                {translateItems.map((item) => (
+                {speakOriginalItem && speakButton(speakOriginalItem, 'original')}
+                {dictionaryItem && (
                     <Button
-                        key={item.key}
+                        key={dictionaryItem.key}
                         size='sm'
                         radius='sm'
-                        variant={item.active ? 'solid' : 'flat'}
-                        color={item.active ? 'primary' : 'default'}
-                        aria-pressed={item.active}
-                        isDisabled={!item.enabled}
-                        title={item.enabled ? undefined : message(item.code, item.reason)}
+                        variant={dictionaryOpen ? 'solid' : 'flat'}
+                        color={dictionaryOpen ? 'primary' : 'default'}
+                        aria-pressed={dictionaryOpen}
+                        aria-expanded={dictionaryOpen}
+                        aria-label={t('selection_actions.dictionary')}
+                        isDisabled={!dictionaryItem.enabled}
+                        title={titleFor(dictionaryItem, t('selection_actions.dictionary'))}
                         className='h-[24px] min-w-0 px-2 text-[12px]'
-                        onPress={() => run(item.actionId, item.params)}
+                        startContent={<MdMenuBook className='text-[14px]' />}
+                        onPress={() => run(dictionaryItem.actionId, dictionaryItem.params)}
                     >
-                        {languageName(item.params.language)}
+                        {label(t('selection_actions.dictionary'))}
                     </Button>
-                ))}
-                <Tooltip content={t('selection_actions.edit_favorites')}>
+                )}
+                {aiUnconfigured && (
                     <Button
-                        isIconOnly
                         size='sm'
-                        variant={editing ? 'solid' : 'light'}
-                        aria-label={t('selection_actions.edit_favorites')}
-                        aria-expanded={editing}
-                        className='h-[24px] w-[24px] min-w-0'
-                        onPress={() => setEditing((v) => !v)}
+                        radius='sm'
+                        variant='flat'
+                        aria-label={t('selection_actions.ai.set_up')}
+                        title={message(ActionCode.AI_NOT_CONFIGURED)}
+                        className='h-[24px] min-w-0 px-2 text-[12px]'
+                        startContent={<MdAutoAwesome className='text-[14px]' />}
+                        onPress={() => openSettings()}
+                        data-testid='ai-set-up'
                     >
-                        <LuSettings2 className='text-[14px]' />
+                        {label(t('selection_actions.ai.set_up'))}
                     </Button>
-                </Tooltip>
-                <span
-                    className='mx-0.5 h-[14px] w-px bg-default-300'
-                    aria-hidden='true'
-                />
-                {dictionaryItems.map((item) => {
-                    const open = dictionary.state.status !== DictionaryStatus.IDLE;
-                    return (
-                        <Button
-                            key={item.key}
-                            size='sm'
-                            radius='sm'
-                            variant={open ? 'solid' : 'flat'}
-                            color={open ? 'primary' : 'default'}
-                            aria-pressed={open}
-                            aria-expanded={open}
-                            isDisabled={!item.enabled}
-                            title={item.enabled ? undefined : message(item.code, item.reason)}
-                            className='h-[24px] min-w-0 px-2 text-[12px]'
-                            startContent={<MdMenuBook className='text-[14px]' />}
-                            onPress={() => run(item.actionId, item.params)}
-                        >
-                            {t('selection_actions.dictionary')}
-                        </Button>
-                    );
-                })}
-                {speakItems.map((item) => {
-                    const kind = item.actionId === 'speak_original' ? 'original' : 'translation';
-                    const speaking = activeSpeech?.kind === kind;
-                    const label = t(`selection_actions.${item.actionId}`);
-                    return (
-                        <Button
-                            key={item.key}
-                            size='sm'
-                            radius='sm'
-                            variant={speaking ? 'solid' : 'flat'}
-                            color={speaking ? 'secondary' : 'default'}
-                            aria-pressed={speaking}
-                            isDisabled={!item.enabled}
-                            title={
-                                item.enabled
-                                    ? speaking
-                                        ? t('selection_actions.stop_speaking')
-                                        : undefined
-                                    : message(item.code, item.reason)
-                            }
-                            className='h-[24px] min-w-0 px-2 text-[12px]'
-                            startContent={<HiOutlineVolumeUp className='text-[14px]' />}
-                            onPress={() => run(item.actionId, item.params)}
-                        >
-                            {speaking && activeSpeech.phase === 'pending' ? (
-                                <PulseLoader
-                                    size={3}
-                                    color='currentColor'
-                                    speedMultiplier={0.8}
-                                />
-                            ) : (
-                                label
-                            )}
-                        </Button>
-                    );
-                })}
+                )}
+                {!aiUnconfigured && slotItem && (
+                    <Button
+                        key={slotItem.key}
+                        size='sm'
+                        radius='sm'
+                        variant={slotItem.active ? 'solid' : 'flat'}
+                        color={slotItem.active ? 'primary' : 'default'}
+                        aria-pressed={slotItem.active}
+                        aria-label={aiLabel(slotItem)}
+                        isDisabled={!slotItem.enabled}
+                        title={titleFor(slotItem, aiLabel(slotItem))}
+                        className='h-[24px] min-w-0 max-w-[140px] px-2 text-[12px]'
+                        startContent={<MdAutoAwesome className='text-[14px]' />}
+                        onPress={() => runAi(slotItem)}
+                        data-testid='ai-slot'
+                    >
+                        <span className='sa-label truncate'>{aiLabel(slotItem)}</span>
+                    </Button>
+                )}
+                <Button
+                    size='sm'
+                    radius='sm'
+                    variant={moreOpen ? 'solid' : 'flat'}
+                    aria-expanded={moreOpen}
+                    aria-controls='selection-more'
+                    aria-label={t('selection_actions.more')}
+                    title={t('selection_actions.more')}
+                    className='h-[24px] min-w-0 px-2 text-[12px]'
+                    startContent={<MdMoreHoriz className='text-[14px]' />}
+                    onPress={() => setMoreOpen((v) => !v)}
+                    data-testid='selection-more-toggle'
+                >
+                    {label(t('selection_actions.more'))}
+                </Button>
             </div>
 
-            {ai && (analysisItem || improveItems.length > 0) && (
+            {/* More: everything else, grouped. Inline rather than a popover so it fits a narrow window. */}
+            {moreOpen && (
                 <div
-                    ref={aiToolbarRef}
-                    role='toolbar'
-                    aria-label={t('selection_actions.ai.toolbar')}
-                    onKeyDownCapture={arrowKeyHandler(aiToolbarRef)}
-                    className='flex flex-wrap items-center gap-1'
-                    data-testid='selection-ai-actions'
+                    id='selection-more'
+                    className='flex flex-col gap-1 rounded-md border border-content3 p-1'
+                    data-testid='selection-more'
                 >
-                    {analysisItem && (
+                    <div
+                        ref={moreToolbarRef}
+                        role='toolbar'
+                        aria-label={t('selection_actions.more')}
+                        onKeyDownCapture={arrowKeyHandler(moreToolbarRef)}
+                        className='flex flex-wrap items-center gap-1'
+                    >
+                        {speakTranslationItem && speakButton(speakTranslationItem, 'translation')}
                         <Button
                             size='sm'
                             radius='sm'
-                            variant={analysisItem.active ? 'solid' : 'flat'}
-                            color={analysisItem.active ? 'primary' : 'default'}
-                            aria-pressed={analysisItem.active}
-                            isDisabled={!analysisItem.enabled}
-                            title={analysisItem.enabled ? undefined : message(analysisItem.code, analysisItem.reason)}
+                            variant={editing ? 'solid' : 'flat'}
+                            aria-expanded={editing}
                             className='h-[24px] min-w-0 px-2 text-[12px]'
-                            onPress={() => run(analysisItem.actionId, analysisItem.params)}
+                            startContent={<LuSettings2 className='text-[14px]' />}
+                            onPress={() => setEditing((v) => !v)}
                         >
-                            {t('selection_actions.sentence_analysis')}
+                            {t('selection_actions.edit_favorites')}
                         </Button>
+                    </div>
+
+                    {ai && (analysisItem || improveItems.length > 0) && (
+                        <div
+                            ref={aiToolbarRef}
+                            role='toolbar'
+                            aria-label={t('selection_actions.ai.toolbar')}
+                            onKeyDownCapture={arrowKeyHandler(aiToolbarRef)}
+                            className='flex flex-wrap items-center gap-1'
+                            data-testid='selection-ai-actions'
+                        >
+                            {analysisItem && (
+                                <Button
+                                    size='sm'
+                                    radius='sm'
+                                    variant={analysisItem.active ? 'solid' : 'flat'}
+                                    color={analysisItem.active ? 'primary' : 'default'}
+                                    aria-pressed={analysisItem.active}
+                                    isDisabled={!analysisItem.enabled}
+                                    title={analysisItem.enabled ? undefined : message(analysisItem.code, analysisItem.reason)}
+                                    className='h-[24px] min-w-0 px-2 text-[12px]'
+                                    onPress={() => runAi(analysisItem)}
+                                >
+                                    {t('selection_actions.sentence_analysis')}
+                                </Button>
+                            )}
+                            <span
+                                className='mx-0.5 h-[14px] w-px bg-default-300'
+                                aria-hidden='true'
+                            />
+                            <span className='text-[11px] text-default-500'>{t('selection_actions.improve')}</span>
+                            {improveItems.map((item) => (
+                                <Button
+                                    key={item.key}
+                                    size='sm'
+                                    radius='sm'
+                                    variant={item.active ? 'solid' : 'flat'}
+                                    color={item.active ? 'primary' : 'default'}
+                                    aria-pressed={item.active}
+                                    isDisabled={!item.enabled}
+                                    title={item.enabled ? undefined : message(item.code, item.reason)}
+                                    className='h-[24px] min-w-0 px-2 text-[12px]'
+                                    onPress={() => runAi(item)}
+                                >
+                                    {t(`selection_actions.improve_presets.${item.params.preset}`)}
+                                </Button>
+                            ))}
+                            <span
+                                className='mx-0.5 h-[14px] w-px bg-default-300'
+                                aria-hidden='true'
+                            />
+                            <AiServiceSelect ai={ai} />
+                        </div>
                     )}
-                    <span
-                        className='mx-0.5 h-[14px] w-px bg-default-300'
-                        aria-hidden='true'
-                    />
-                    <span className='text-[11px] text-default-500'>{t('selection_actions.improve')}</span>
-                    {improveItems.map((item) => (
-                        <Button
-                            key={item.key}
-                            size='sm'
-                            radius='sm'
-                            variant={item.active ? 'solid' : 'flat'}
-                            color={item.active ? 'primary' : 'default'}
-                            aria-pressed={item.active}
-                            isDisabled={!item.enabled}
-                            title={item.enabled ? undefined : message(item.code, item.reason)}
-                            className='h-[24px] min-w-0 px-2 text-[12px]'
-                            onPress={() => run(item.actionId, item.params)}
+
+                    {custom && (
+                        <div
+                            ref={customToolbarRef}
+                            role='toolbar'
+                            aria-label={t('selection_actions.custom.toolbar')}
+                            onKeyDownCapture={arrowKeyHandler(customToolbarRef)}
+                            className='flex flex-wrap items-center gap-1'
+                            data-testid='selection-custom-actions'
                         >
-                            {t(`selection_actions.improve_presets.${item.params.preset}`)}
-                        </Button>
-                    ))}
-                    <span
-                        className='mx-0.5 h-[14px] w-px bg-default-300'
-                        aria-hidden='true'
-                    />
-                    <AiServiceSelect ai={ai} />
+                            {customItems.map((item) => (
+                                <Button
+                                    key={item.key}
+                                    size='sm'
+                                    radius='sm'
+                                    variant={item.active ? 'solid' : 'flat'}
+                                    color={item.active ? 'primary' : 'default'}
+                                    aria-pressed={item.active}
+                                    isDisabled={!item.enabled}
+                                    title={item.enabled ? undefined : message(item.code, item.reason)}
+                                    className='h-[24px] min-w-0 max-w-[160px] px-2 text-[12px]'
+                                    startContent={
+                                        <CustomActionIcon icon={custom.actions.find((x) => x.id === item.params.customId)?.icon} />
+                                    }
+                                    onPress={() => runAi(item)}
+                                >
+                                    <span className='truncate'>{item.label}</span>
+                                </Button>
+                            ))}
+                            <Tooltip content={t('selection_actions.custom.manage')}>
+                                <Button
+                                    isIconOnly
+                                    size='sm'
+                                    variant={managingCustom ? 'solid' : 'light'}
+                                    aria-label={t('selection_actions.custom.manage')}
+                                    aria-expanded={managingCustom}
+                                    className='h-[24px] w-[24px] min-w-0'
+                                    onPress={() => setManagingCustom((v) => !v)}
+                                >
+                                    <MdEditNote className='text-[16px]' />
+                                </Button>
+                            </Tooltip>
+                        </div>
+                    )}
                 </div>
             )}
 
-            {custom && (
-                <div
-                    ref={customToolbarRef}
-                    role='toolbar'
-                    aria-label={t('selection_actions.custom.toolbar')}
-                    onKeyDownCapture={arrowKeyHandler(customToolbarRef)}
-                    className='flex flex-wrap items-center gap-1'
-                    data-testid='selection-custom-actions'
-                >
-                    {customItems.map((item) => (
-                        <Button
-                            key={item.key}
-                            size='sm'
-                            radius='sm'
-                            variant={item.active ? 'solid' : 'flat'}
-                            color={item.active ? 'primary' : 'default'}
-                            aria-pressed={item.active}
-                            isDisabled={!item.enabled}
-                            title={item.enabled ? undefined : message(item.code, item.reason)}
-                            className='h-[24px] min-w-0 max-w-[160px] px-2 text-[12px]'
-                            startContent={
-                                <CustomActionIcon icon={custom.actions.find((x) => x.id === item.params.customId)?.icon} />
-                            }
-                            onPress={() => run(item.actionId, item.params)}
-                        >
-                            <span className='truncate'>{item.label}</span>
-                        </Button>
-                    ))}
-                    <Tooltip content={t('selection_actions.custom.manage')}>
-                        <Button
-                            isIconOnly
-                            size='sm'
-                            variant={managingCustom ? 'solid' : 'light'}
-                            aria-label={t('selection_actions.custom.manage')}
-                            aria-expanded={managingCustom}
-                            className='h-[24px] w-[24px] min-w-0'
-                            onPress={() => setManagingCustom((v) => !v)}
-                        >
-                            <MdEditNote className='text-[16px]' />
-                        </Button>
-                    </Tooltip>
-                </div>
+            {editing && (
+                <FavoriteLanguagesEditor
+                    favoriteLanguages={favoriteLanguages}
+                    updateFavorites={updateFavorites}
+                    languageName={languageName}
+                />
             )}
 
             {custom && managingCustom && (
@@ -288,7 +405,7 @@ export function SelectionActionPaletteView({
                 />
             )}
 
-            {ai && ctx.hasText && ai.status !== 'ready' && (
+            {ai && ctx.hasText && ai.status !== 'ready' && !aiUnconfigured && (
                 <span
                     className='text-[11px] text-warning-600 break-words'
                     role='status'
@@ -297,10 +414,42 @@ export function SelectionActionPaletteView({
                 </span>
             )}
 
-            {ai?.result && (
+            {ai?.result && aiCollapsed && (
+                <CollapsedPanel
+                    testId='ai-result-collapsed'
+                    title={t('selection_actions.ai.result')}
+                    detail={
+                        ai.result.labelKey
+                            ? t(ai.result.labelKey, { defaultValue: ai.result.defaultLabel })
+                            : ai.result.defaultLabel
+                    }
+                    onExpand={() => setChosenPanel('ai')}
+                />
+            )}
+            {ai?.result && !aiCollapsed && (
                 <AiResultPanel
                     result={ai.result}
                     ai={ai}
+                />
+            )}
+
+            {dictionaryCollapsed && (
+                <CollapsedPanel
+                    testId='dictionary-panel-collapsed'
+                    title={t('selection_actions.dictionary')}
+                    detail={dictionary.state.snapshot?.query ?? ''}
+                    onExpand={() => setChosenPanel('dictionary')}
+                />
+            )}
+            {!dictionaryCollapsed && (
+                <DictionaryPanel
+                    state={dictionary.state}
+                    sources={dictionary.sources}
+                    selectSource={dictionary.selectSource}
+                    dismiss={dictionary.dismiss}
+                    pronounce={() => run('speak_original')}
+                    speaking={activeSpeech?.kind === 'original'}
+                    speakingPending={activeSpeech?.kind === 'original' && activeSpeech.phase === 'pending'}
                 />
             )}
 
@@ -331,25 +480,27 @@ export function SelectionActionPaletteView({
                     )}
                 </div>
             )}
-
-            <DictionaryPanel
-                state={dictionary.state}
-                sources={dictionary.sources}
-                selectSource={dictionary.selectSource}
-                dismiss={dictionary.dismiss}
-                pronounce={() => run('speak_original')}
-                speaking={activeSpeech?.kind === 'original'}
-                speakingPending={activeSpeech?.kind === 'original' && activeSpeech.phase === 'pending'}
-            />
-
-            {editing && (
-                <FavoriteLanguagesEditor
-                    favoriteLanguages={favoriteLanguages}
-                    updateFavorites={updateFavorites}
-                    languageName={languageName}
-                />
-            )}
         </div>
+    );
+}
+
+// A result panel opened earlier, folded to one line; pressing it expands it again.
+function CollapsedPanel({ testId, title, detail, onExpand }) {
+    return (
+        <button
+            type='button'
+            aria-expanded='false'
+            onClick={onExpand}
+            className='flex w-full items-center gap-1 rounded-md bg-content2 px-1.5 py-1 text-left text-[11px] text-default-500 hover:bg-content3'
+            data-testid={testId}
+        >
+            <MdChevronRight
+                className='text-[14px] shrink-0'
+                aria-hidden='true'
+            />
+            <span className='font-medium text-default-600 shrink-0'>{title}</span>
+            <span className='truncate'>{detail}</span>
+        </button>
     );
 }
 
@@ -614,9 +765,15 @@ function FavoriteLanguagesEditor({ favoriteLanguages, updateFavorites, languageN
     );
 }
 
-export default function SelectionActionPalette({ serviceInstanceConfigMap }) {
+// `defaultMoreOpen` starts with the More section expanded (used by tests that inspect its actions).
+export default function SelectionActionPalette({ serviceInstanceConfigMap, defaultMoreOpen = false }) {
     const actions = useSelectionActions({ serviceInstanceConfigMap });
     // Only the existing selection Translate window gets the palette; input/image windows are untouched.
     if (!actions.ctx.isSelectionWindow) return null;
-    return <SelectionActionPaletteView {...actions} />;
+    return (
+        <SelectionActionPaletteView
+            {...actions}
+            defaultMoreOpen={defaultMoreOpen}
+        />
+    );
 }

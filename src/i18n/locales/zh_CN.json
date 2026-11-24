@@ -1069,6 +1069,7 @@
       "stop_speaking": "停止朗读",
       "translating": "翻译中…",
       "edit_favorites": "编辑常用语言",
+      "more": "更多",
       "add_language": "添加语言",
       "move_up": "上移",
       "move_down": "下移",
@@ -1085,6 +1086,7 @@
       },
       "ai": {
         "toolbar": "AI 操作",
+        "set_up": "设置 AI",
         "service": "AI 服务",
         "choose_service": "选择 AI 服务",
         "result": "AI 结果",

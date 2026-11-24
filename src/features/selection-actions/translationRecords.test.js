@@ -154,12 +154,13 @@ describe('production wiring guards (the mounted component cannot run without a D
         assert.match(target, /speak\(pronunciation\['voice'\]\)/);
     });
 
-    test('the palette is mounted only for the selection window, next to the language selector', () => {
+    test('the palette is mounted only for the selection window, below the translation result', () => {
         assert.match(
             translateWindow,
-            /windowType === '\[SELECTION_TRANSLATE\]' && serviceInstanceConfigMap !== null && \(\s*<SelectionActionPalette/
+            /windowType === '\[SELECTION_TRANSLATE\]' && serviceInstanceConfigMap !== null && \(\s*<div[^>]*>\s*<SelectionActionPalette/
         );
         const palette = translateWindow.indexOf('<SelectionActionPalette');
         assert.ok(palette > translateWindow.indexOf('<LanguageArea />'));
+        assert.ok(palette > translateWindow.indexOf('Translation Results Section'));
     });
 });

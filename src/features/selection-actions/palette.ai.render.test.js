@@ -59,7 +59,7 @@ function result(overrides = {}) {
 const panel = (r) => render(createElement(Panel, { result: r, ai: aiHandlers }));
 
 // A real runtime over a real store gives the real item list / context the view is rendered from.
-function viewHtml({ ai: aiOverrides = {}, env = {}, text = 'Hello world', mutate } = {}) {
+function viewHtml({ ai: aiOverrides = {}, env = {}, text = 'Hello world', mutate, aiSlot = null } = {}) {
     const s = createScenario(p, env);
     try {
         s.set('sourceText', text);
@@ -76,6 +76,7 @@ function viewHtml({ ai: aiOverrides = {}, env = {}, text = 'Hello world', mutate
         };
         return render(
             createElement(View, {
+                defaultMoreOpen: true,
                 items: s.runtime.getItems(),
                 ctx,
                 activeSpeech: null,
@@ -84,6 +85,7 @@ function viewHtml({ ai: aiOverrides = {}, env = {}, text = 'Hello world', mutate
                 favoriteLanguages: ['zh_cn', 'en'],
                 updateFavorites: noop,
                 ai,
+                aiSlot,
             })
         );
     } finally {
@@ -113,8 +115,25 @@ describe('AI row of the palette', () => {
             assert.match(button(html, label), /disabled/, label);
             assert.match(button(html, label), /title="No AI service is configured\."/, label);
         }
-        assert.match(html, /role="status"[^>]*>No AI service is configured\./);
+        // The action row offers "Set up AI" in place of the slot, instead of a status line.
+        assert.match(html, /data-testid="ai-set-up"[^>]*title="No AI service is configured\."/);
+        assert.doesNotMatch(html, /data-testid="ai-slot"/);
+        assert.doesNotMatch(html, /role="status"[^>]*>No AI service is configured\./);
         assert.match(button(html, 'Choose AI service'), /disabled/);
+    });
+
+    test('the action row slot shows Sentence Analysis by default and the recent AI action once one ran', () => {
+        const env = { aiInstanceKey: 'openai_compat_ai@a1' };
+        const slot = (html) => html.match(/<button[^>]*data-testid="ai-slot"[^>]*>(?:(?!<\/button>).)*<\/button>/s)?.[0] ?? '';
+        assert.match(slot(viewHtml({ env })), /Analyze sentence/);
+        assert.match(
+            slot(viewHtml({ env, aiSlot: { setting: 'recent', recentKey: 'improve_writing:concise' } })),
+            /Concise/
+        );
+        assert.match(
+            slot(viewHtml({ env, aiSlot: { setting: 'improve_writing:casual', recentKey: 'improve_writing:concise' } })),
+            /Casual/
+        );
     });
 
     test('a deleted chosen instance is reported, the selector offers the configured ones', () => {
@@ -137,6 +156,7 @@ describe('AI row of the palette', () => {
         try {
             const html = render(
                 createElement(View, {
+                defaultMoreOpen: true,
                     items: s.runtime.getItems(),
                     ctx: s.runtime.getContext(),
                     activeSpeech: null,
@@ -169,6 +189,7 @@ describe('AI row of the palette', () => {
             const ctx = s.runtime.getContext();
             const html = render(
                 createElement(View, {
+                defaultMoreOpen: true,
                     items: s.runtime.getItems(),
                     ctx,
                     activeSpeech: null,

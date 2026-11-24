@@ -75,6 +75,7 @@ function viewHtml({ raw, env = {}, text = 'Hello world', mutate } = {}) {
         const ctx = s.runtime.getContext();
         return render(
             createElement(View, {
+                defaultMoreOpen: true,
                 items: s.runtime.getItems(),
                 ctx,
                 activeSpeech: null,
@@ -163,6 +164,7 @@ describe('custom action row of the palette', () => {
         try {
             const html = render(
                 createElement(View, {
+                defaultMoreOpen: true,
                     items: s.runtime.getItems(),
                     ctx: s.runtime.getContext(),
                     activeSpeech: null,
@@ -249,6 +251,7 @@ describe('custom action result panel', () => {
             assert.equal(ctx.ai.result.customId, 'a');
             const html = render(
                 createElement(View, {
+                defaultMoreOpen: true,
                     items: s.runtime.getItems(),
                     ctx,
                     activeSpeech: null,

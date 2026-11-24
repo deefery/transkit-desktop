@@ -26,6 +26,7 @@ import {
 import { createSelectionActionRuntime } from './runtime';
 import { dictionaryStateAtom } from './dictionary/controller';
 import { DICTIONARY_SOURCE_CONFIG_KEY } from './dictionary/sources';
+import { AI_RECENT_CONFIG_KEY, AI_SLOT_CONFIG_KEY, AI_SLOT_RECENT } from './panelLayout';
 
 // Persisted choice of the AI service instance the AI actions use (an instance key only, never a
 // config or key). Empty = the first configured AI service.
@@ -107,6 +108,8 @@ export function useSelectionActions({ serviceInstanceConfigMap }) {
     });
     const [storedFavorites, setStoredFavorites] = useConfig(FAVORITE_LANGUAGES_CONFIG_KEY, DEFAULT_FAVORITE_LANGUAGES);
     const [dictionarySourcePreference, setDictionarySourcePreference] = useConfig(DICTIONARY_SOURCE_CONFIG_KEY, '');
+    const [aiSlotSetting] = useConfig(AI_SLOT_CONFIG_KEY, AI_SLOT_RECENT);
+    const [aiRecentKey, setAiRecentKey] = useConfig(AI_RECENT_CONFIG_KEY, '');
     const favoriteLanguages = normalizeFavoriteLanguages(storedFavorites);
     const ttsInstanceKey = resolveActiveTtsInstanceKey(ttsServiceList, ttsActiveService);
     const ttsPluginInfo = useTtsPluginInfo(ttsInstanceKey);
@@ -272,6 +275,14 @@ export function useSelectionActions({ serviceInstanceConfigMap }) {
             select: selectAiInstance,
             retry: retryAi,
             dismiss: dismissAi,
+        },
+        // Which AI action the action row's slot shows (docs/fork/u0-selection-panel-design.md, 4.2).
+        aiSlot: {
+            setting: aiSlotSetting ?? AI_SLOT_RECENT,
+            recentKey: aiRecentKey ?? '',
+            remember: (key) => {
+                if (typeof key === 'string' && key !== '' && key !== aiRecentKey) setAiRecentKey(key);
+            },
         },
     };
 }
