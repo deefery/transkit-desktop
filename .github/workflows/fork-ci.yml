@@ -1,0 +1,74 @@
+# Fork-owned CI for custom/main. The upstream workflow (package.yml) only runs on `master`, which
+# this fork does not have; it is left untouched so upstream merges stay cheap.
+name: Fork CI
+
+on:
+    push:
+        branches: [custom/main]
+    pull_request:
+        branches: [custom/main]
+    workflow_dispatch:
+
+permissions:
+    contents: read
+
+concurrency:
+    group: fork-ci-${{ github.ref }}
+    # Superseded PR runs are cancelled; every push to custom/main runs to completion.
+    cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+    test-and-build:
+        # Windows matches the product's primary platform and the locally validated environment.
+        runs-on: windows-latest
+        timeout-minutes: 30
+        env:
+            # Same headless browser the suite is validated with locally. Headless msedge 156 does not
+            # complete the rendered checks, so the runner's preinstalled Edge is deliberately not used.
+            CHROME_HEADLESS_SHELL_VERSION: 151.0.7922.138
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v5
+
+            - name: Set up pnpm
+              uses: pnpm/action-setup@v4
+              with:
+                  version: 11.11.0
+
+            - name: Set up Node
+              uses: actions/setup-node@v5
+              with:
+                  node-version-file: .node-version
+                  cache: pnpm
+
+            - name: Install dependencies
+              run: pnpm install --frozen-lockfile
+
+            - name: Cache headless browser
+              uses: actions/cache@v4
+              with:
+                  path: ${{ runner.temp }}/chrome-headless-shell
+                  key: chrome-headless-shell-${{ runner.os }}-${{ env.CHROME_HEADLESS_SHELL_VERSION }}
+
+            - name: Install headless browser for the rendered checks
+              shell: pwsh
+              run: |
+                  $dir = Join-Path $env:RUNNER_TEMP 'chrome-headless-shell'
+                  npx --yes @puppeteer/browsers@3.2.6 install "chrome-headless-shell@$env:CHROME_HEADLESS_SHELL_VERSION" --path $dir
+                  if ($LASTEXITCODE) { exit $LASTEXITCODE }
+                  $exe = Get-ChildItem -LiteralPath $dir -Recurse -Filter chrome-headless-shell.exe | Select-Object -First 1
+                  if (-not $exe) { throw "chrome-headless-shell.exe not found under $dir" }
+                  "EDGE_PATH=$($exe.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+            # Browser tests skip when no browser is found; fail here instead so CI never passes with
+            # the rendered checks silently skipped.
+            - name: Check the browser runner uses that browser
+              shell: pwsh
+              run: |
+                  node --input-type=module -e "const { findBrowser } = await import('./src/features/selection-actions/dictionary/testing/browserRunner.mjs'); const found = findBrowser(); console.log('browser:', found); if (found !== process.env.EDGE_PATH) process.exit(1);"
+
+            - name: Test
+              run: pnpm test
+
+            - name: Build frontend
+              run: pnpm exec vite build
