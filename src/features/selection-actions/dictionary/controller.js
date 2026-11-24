@@ -100,6 +100,17 @@ export function createDictionaryController({ store, getContext, getEnv, detect }
         const fail = (code, detail) =>
             publish({ ...base, status: DictionaryStatus.ERROR, snapshot, error: errorState(code, detail) });
 
+        // An automatic lookup (a new word/phrase selection) shows only an answer: anything the
+        // dictionary cannot answer leaves the panel closed instead of showing an error.
+        const auto = params.auto === true;
+        if (auto && input.kind !== InputKind.WORD && input.kind !== InputKind.PHRASE) {
+            return accepted('skipped');
+        }
+        const quiet = () => {
+            if (isCurrent()) publish(IDLE);
+            return accepted('skipped');
+        };
+
         if (input.kind === InputKind.TOO_LONG) {
             fail(DictionaryErrorCode.TOO_LONG);
             return accepted('completed');
@@ -109,7 +120,7 @@ export function createDictionaryController({ store, getContext, getEnv, detect }
             return accepted('completed');
         }
 
-        publish({ ...base, status: DictionaryStatus.LOADING, snapshot });
+        if (!auto) publish({ ...base, status: DictionaryStatus.LOADING, snapshot });
         try {
             const source = DICTIONARY_SOURCES[selected.id];
             // Language of exactly this text: declared/detected from the context, else detect now.
@@ -121,7 +132,11 @@ export function createDictionaryController({ store, getContext, getEnv, detect }
                 from = snapshot.from;
             }
             const unsupported = checkSourceSupport(source, { inputKind: input.kind, from, to: ctx.targetLanguage });
-            if (unsupported) throw unsupported;
+            if (unsupported) {
+                if (auto) return quiet();
+                throw unsupported;
+            }
+            if (auto) publish({ ...base, status: DictionaryStatus.LOADING, snapshot });
             const result = await runDictionaryLookup({
                 source,
                 services: env.dictionaryServices,
@@ -135,6 +150,7 @@ export function createDictionaryController({ store, getContext, getEnv, detect }
             return accepted('completed');
         } catch (error) {
             if (!isCurrent()) return accepted('stale');
+            if (auto) return quiet();
             const dictionaryError =
                 error instanceof DictionaryError
                     ? error

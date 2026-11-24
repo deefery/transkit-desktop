@@ -116,7 +116,7 @@ describe('AI row of the palette', () => {
             assert.match(button(html, label), /title="No AI service is configured\."/, label);
         }
         // The action row offers "Set up AI" in place of the slot, instead of a status line.
-        assert.match(html, /data-testid="ai-set-up"[^>]*title="No AI service is configured\."/);
+        assert.match(html, /data-testid="ai-set-up"[^>]*title="No AI service is configured\. \(A\)"/);
         assert.doesNotMatch(html, /data-testid="ai-slot"/);
         assert.doesNotMatch(html, /role="status"[^>]*>No AI service is configured\./);
         assert.match(button(html, 'Choose AI service'), /disabled/);

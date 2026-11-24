@@ -24,9 +24,10 @@ import {
     createCustomActionsApi,
 } from './customActions';
 import { createSelectionActionRuntime } from './runtime';
-import { dictionaryStateAtom } from './dictionary/controller';
+import { DictionaryStatus, dictionaryStateAtom } from './dictionary/controller';
 import { DICTIONARY_SOURCE_CONFIG_KEY } from './dictionary/sources';
 import { AI_RECENT_CONFIG_KEY, AI_SLOT_CONFIG_KEY, AI_SLOT_RECENT } from './panelLayout';
+import { AUTO_DICTIONARY_CONFIG_KEY, planAutoActions } from './panelKeys';
 
 // Persisted choice of the AI service instance the AI actions use (an instance key only, never a
 // config or key). Empty = the first configured AI service.
@@ -110,6 +111,7 @@ export function useSelectionActions({ serviceInstanceConfigMap }) {
     const [dictionarySourcePreference, setDictionarySourcePreference] = useConfig(DICTIONARY_SOURCE_CONFIG_KEY, '');
     const [aiSlotSetting] = useConfig(AI_SLOT_CONFIG_KEY, AI_SLOT_RECENT);
     const [aiRecentKey, setAiRecentKey] = useConfig(AI_RECENT_CONFIG_KEY, '');
+    const [autoDictionary, setAutoDictionary] = useConfig(AUTO_DICTIONARY_CONFIG_KEY, true);
     const favoriteLanguages = normalizeFavoriteLanguages(storedFavorites);
     const ttsInstanceKey = resolveActiveTtsInstanceKey(ttsServiceList, ttsActiveService);
     const ttsPluginInfo = useTtsPluginInfo(ttsInstanceKey);
@@ -200,6 +202,23 @@ export function useSelectionActions({ serviceInstanceConfigMap }) {
         [runtime]
     );
 
+    // Smart defaults (docs/fork/u0-selection-panel-design.md, section 5): a new word or phrase opens
+    // the dictionary by itself, once per selection and target language, so a dismissed panel stays
+    // closed. The automatic lookup stays silent when the dictionary has no answer.
+    // useConfig is null until the stored value is read: wait for it, so a turned-off setting never
+    // gets one automatic lookup on the window's first selection.
+    const autoLoaded = autoDictionary !== null && autoDictionary !== undefined;
+    const autoPlan = planAutoActions({ text: ctx.text, autoDictionary: autoDictionary === true });
+    const autoKeyRef = useRef(null);
+    const autoKey = ctx.isSelectionWindow && ctx.hasText ? JSON.stringify([ctx.text, ctx.targetLanguage]) : null;
+    useEffect(() => {
+        if (autoKey === null || !autoLoaded || autoKeyRef.current === autoKey) return;
+        autoKeyRef.current = autoKey;
+        if (!autoPlan.dictionary) return;
+        if (runtime.dictionary.getState(runtime.getContext()).status !== DictionaryStatus.IDLE) return;
+        void runtime.dispatch('dictionary', { auto: true });
+    }, [autoKey, autoLoaded, autoPlan.dictionary, runtime]);
+
     const selectAiInstance = useCallback(
         (key) => {
             // Only an instance that is actually configured can be chosen.
@@ -275,6 +294,12 @@ export function useSelectionActions({ serviceInstanceConfigMap }) {
             select: selectAiInstance,
             retry: retryAi,
             dismiss: dismissAi,
+        },
+        // Smart defaults of this selection and their setting (section 5 of the U0 design).
+        autoPlan,
+        autoDictionary: {
+            enabled: autoDictionary === true,
+            set: (value) => setAutoDictionary(Boolean(value)),
         },
         // Which AI action the action row's slot shows (docs/fork/u0-selection-panel-design.md, 4.2).
         aiSlot: {

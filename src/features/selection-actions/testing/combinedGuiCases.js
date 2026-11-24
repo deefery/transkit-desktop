@@ -11,6 +11,8 @@ import { store as configStore } from '/src/utils/store.js';
 import SelectionActionPalette from '/src/features/selection-actions/SelectionActionPalette.jsx';
 import { sourceTextAtom, detectLanguageAtom, windowTypeAtom } from '/src/window/Translate/components/SourceArea/index.jsx';
 import { sourceLanguageAtom, targetLanguageAtom } from '/src/window/Translate/components/LanguageArea/index.jsx';
+import { translationRecordsAtom } from '/src/features/selection-actions/translationRecords.js';
+import { appWindow } from '@tauri-apps/api/window';
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -29,6 +31,15 @@ const textOf = (node) => (node ? node.textContent.replace(/\s+/g, ' ').trim() : 
 const labelOf = (el) => el?.getAttribute('aria-label') || el?.textContent.trim() || null;
 
 const AI_KEY = 'openai_compat_ai@a1';
+
+// A window-wide key press while nothing in particular has the focus.
+const press = async (code, init = {}) => {
+    const key = init.key ?? (code.startsWith('Key') ? code.slice(3).toLowerCase() : code);
+    (init.target ?? document.activeElement ?? document.body).dispatchEvent(
+        new KeyboardEvent('keydown', { key, code, bubbles: true, cancelable: true, ...init })
+    );
+    await sleep(80);
+};
 
 export async function run() {
     const { default: i18n } = await import('/src/i18n/index.jsx');
@@ -53,6 +64,25 @@ export async function run() {
     store.set(targetLanguageAtom, 'zh_cn');
     store.set(detectLanguageAtom, 'en');
     store.set(sourceTextAtom, 'resilience');
+    // The translation the Translate window produced for this selection (what C copies).
+    store.set(translationRecordsAtom, {
+        google: {
+            requestId: 1,
+            instanceKey: 'google',
+            text: 'resilience',
+            sourceLanguage: 'auto',
+            targetLanguage: 'zh_cn',
+            effectiveTargetLanguage: 'zh_cn',
+            detectLanguage: 'en',
+            status: 'success',
+            speakText: '韧性',
+            error: '',
+        },
+    });
+    let hides = 0;
+    appWindow.hide = async () => {
+        hides += 1;
+    };
     createRoot(document.getElementById('root')).render(
         React.createElement(Provider, { store }, React.createElement(SelectionActionPalette, { serviceInstanceConfigMap: {} }))
     );
@@ -91,9 +121,11 @@ export async function run() {
         scrollHeight: el.scrollHeight,
     });
 
-    // Dictionary first, then an AI action: the newer AI result is expanded, the dictionary folds.
-    button('Dictionary').click();
-    await waitFor(() => q('dictionary-result'), 'dictionary result');
+    // A selected word opens the dictionary by itself (smart defaults); then an AI action: the newer
+    // AI result is expanded, the dictionary folds.
+    await waitFor(() => q('dictionary-result'), 'automatic dictionary result');
+    const autoDictionary = Boolean(q('dictionary-result'));
+    const dictionarySource = textOf(q('dictionary-source'));
     button('Analyze sentence').click();
     await waitFor(() => q('ai-output'), 'AI output');
     await sleep(100);
@@ -130,7 +162,78 @@ export async function run() {
         overflowsRow: narrowButtons.some((b) => b.getBoundingClientRect().right > row.getBoundingClientRect().right + 1),
     };
 
+    // Keys (nothing focused): Esc closes the expanded panel, then the other one, then hides the window.
+    document.body.style.width = '420px';
+    document.activeElement?.blur();
+    const shown = () => ({
+        dictionary: Boolean(q('dictionary-panel')),
+        dictionaryCollapsed: Boolean(q('dictionary-panel-collapsed')),
+        ai: Boolean(q('ai-result')),
+        aiCollapsed: Boolean(q('ai-result-collapsed')),
+    });
+    const keys = {};
+    await press('Escape');
+    keys.escape1 = shown();
+    await press('KeyD');
+    await waitFor(() => q('dictionary-result'), 'dictionary opened with D');
+    keys.afterD = shown();
+    await press('Escape');
+    keys.escape2 = shown();
+    await press('Escape');
+    keys.escape3 = shown();
+    keys.hidesBefore = hides;
+    await press('Escape');
+    keys.hidesAfter = hides;
+    await press('KeyA');
+    await waitFor(() => q('ai-output'), 'AI slot run with A');
+    keys.afterA = shown();
+    await press('Escape');
+
+    // M opens More and moves the focus into it; Esc closes it again.
+    await press('KeyM');
+    keys.moreOpen = Boolean(q('selection-more'));
+    keys.focusInMore = Boolean(q('selection-more')?.contains(document.activeElement));
+    await press('Escape');
+    keys.moreAfterEscape = Boolean(q('selection-more'));
+    document.activeElement?.blur();
+
+    // C copies the translation; Ctrl+C is left to the system.
+    globalThis.__transkitClipboard = undefined;
+    await press('KeyC', { ctrlKey: true });
+    keys.clipboardAfterCtrlC = globalThis.__transkitClipboard ?? null;
+    await press('KeyC');
+    keys.clipboard = globalThis.__transkitClipboard ?? null;
+    keys.copiedNotice = textOf(q('translation-copied'));
+
+    // Typing in a text field never triggers a shortcut.
+    const field = document.createElement('input');
+    document.body.appendChild(field);
+    field.focus();
+    await press('KeyD', { target: field });
+    await press('Escape', { target: field });
+    keys.inFieldDictionary = Boolean(q('dictionary-panel'));
+    keys.inFieldHides = hides;
+    field.remove();
+
+    // Tooltips name the keys.
+    keys.titles = [...row.querySelectorAll('button')].map((b) => b.getAttribute('title'));
+
+    // Alt+2 switches to the second favorite language.
+    document.activeElement?.blur();
+    await press('Digit2', { altKey: true, key: '2' });
+    keys.targetAfterAlt2 = store.get(targetLanguageAtom);
+
+    // A sentence focuses the AI slot and opens no dictionary.
+    document.activeElement?.blur();
+    store.set(sourceTextAtom, 'Resilience is the capacity to recover quickly from difficulties.');
+    store.set(targetLanguageAtom, 'zh_cn');
+    await sleep(400);
+    keys.sentenceFocus = document.activeElement?.getAttribute('data-testid') ?? null;
+    keys.sentenceDictionary = Boolean(q('dictionary-panel'));
+
     return {
+        autoDictionary,
+        keys,
         actionRow,
         walk,
         afterLeft,
@@ -141,7 +244,7 @@ export async function run() {
         aiOutputBox,
         dictionaryBox,
         aiText,
-        dictionarySource: textOf(q('dictionary-source')),
+        dictionarySource,
         horizontalOverflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
     };
 }

@@ -70,8 +70,54 @@ describe('combined palette (headless Edge)', { skip }, () => {
 
     test('Dictionary and the AI action each come from their own real request', () => {
         assert.equal(out.dictionarySource, 'Source: Cambridge Dictionary');
-        assert.equal(requests.filter((r) => r.url.startsWith('https://dictionary.cambridge.org/')).length, 1);
-        assert.equal(requests.filter((r) => r.url.startsWith('https://llm.one.test/')).length, 1);
+        // The automatic lookup plus the one reopened with D; Analyze sentence by click, then by A.
+        assert.equal(requests.filter((r) => r.url.startsWith('https://dictionary.cambridge.org/')).length, 2);
+        assert.equal(requests.filter((r) => r.url.startsWith('https://llm.one.test/')).length, 2);
+    });
+
+    test('a selected word opens the dictionary by itself', () => {
+        assert.equal(out.autoDictionary, true);
+    });
+
+    test('Esc closes the expanded panel, then the other, then hides the window; D and A reopen', () => {
+        const k = out.keys;
+        assert.deepEqual(k.escape1, { dictionary: false, dictionaryCollapsed: false, ai: true, aiCollapsed: false });
+        assert.deepEqual(k.afterD, { dictionary: true, dictionaryCollapsed: false, ai: false, aiCollapsed: true });
+        assert.deepEqual(k.escape2, { dictionary: false, dictionaryCollapsed: false, ai: true, aiCollapsed: false });
+        assert.deepEqual(k.escape3, { dictionary: false, dictionaryCollapsed: false, ai: false, aiCollapsed: false });
+        assert.equal(k.hidesBefore, 0);
+        assert.equal(k.hidesAfter, 1);
+        assert.equal(k.afterA.ai, true);
+    });
+
+    test('M opens More with the focus inside it and Esc closes it', () => {
+        assert.equal(out.keys.moreOpen, true);
+        assert.equal(out.keys.focusInMore, true);
+        assert.equal(out.keys.moreAfterEscape, false);
+    });
+
+    test('C copies the translation; Ctrl+C is left alone', () => {
+        assert.equal(out.keys.clipboardAfterCtrlC, null);
+        assert.equal(out.keys.clipboard, '韧性');
+        assert.equal(out.keys.copiedNotice, 'Translation copied');
+    });
+
+    test('keys typed in a text field are not shortcuts', () => {
+        assert.equal(out.keys.inFieldDictionary, false);
+        assert.equal(out.keys.inFieldHides, 1);
+    });
+
+    test('tooltips name the shortcut keys', () => {
+        assert.deepEqual(out.keys.titles, ['Speak original (S)', 'Dictionary (D)', 'Analyze sentence (A)', 'More (M)']);
+    });
+
+    test('Alt+2 switches to the second favorite language', () => {
+        assert.equal(out.keys.targetAfterAlt2, 'en');
+    });
+
+    test('a sentence puts the focus on the AI slot and opens no dictionary', () => {
+        assert.equal(out.keys.sentenceFocus, 'ai-slot');
+        assert.equal(out.keys.sentenceDictionary, false);
     });
 
     test('a long multi-line AI answer scrolls inside its own bounded box and does not widen the page', () => {

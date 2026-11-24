@@ -6,6 +6,7 @@ import { createRoot } from 'react-dom/client';
 import { createStore, Provider } from 'jotai';
 import '/src/style.css';
 import '/src/i18n/index.jsx';
+import { store as configStore } from '/src/utils/store.js';
 import SelectionActionPalette from '/src/features/selection-actions/SelectionActionPalette.jsx';
 import { sourceTextAtom, detectLanguageAtom, windowTypeAtom } from '/src/window/Translate/components/SourceArea/index.jsx';
 import { sourceLanguageAtom, targetLanguageAtom } from '/src/window/Translate/components/LanguageArea/index.jsx';
@@ -33,6 +34,8 @@ export async function run({ steps, language = 'en', keepOpen = false }) {
     document.documentElement.classList.add('light');
     document.body.style.cssText = 'margin:0;padding:8px;width:420px;background:#fff;color:#11181c';
     document.getElementById('result').style.display = 'none';
+    // These cases exercise the Dictionary button itself, so the automatic lookup is turned off.
+    await configStore.set('selection_panel_auto_dictionary', false);
     const store = createStore();
     store.set(windowTypeAtom, '[SELECTION_TRANSLATE]');
     store.set(sourceLanguageAtom, 'auto');

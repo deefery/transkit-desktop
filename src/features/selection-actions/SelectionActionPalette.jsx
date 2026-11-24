@@ -12,6 +12,7 @@ import {
     MdEditNote,
     MdMenuBook,
     MdMoreHoriz,
+    MdTouchApp,
 } from 'react-icons/md';
 import { invoke } from '@tauri-apps/api/tauri';
 import PulseLoader from 'react-spinners/PulseLoader';
@@ -33,6 +34,7 @@ import { OutputKind } from './aiActions';
 import { AiStatus } from './aiRunner';
 import { ActionCode, messageFor } from './registry';
 import { expandedPanel, pickAiSlotItem } from './panelLayout';
+import { PanelCommand, escapeTarget, isKeyHandlingTarget, keyCommandFor, withShortcut } from './panelKeys';
 import { DictionaryPanel } from './dictionary/DictionaryPanel';
 import { DictionaryStatus } from './dictionary/controller';
 import { useSelectionActions } from './useSelectionActions';
@@ -52,6 +54,9 @@ const arrowKeyHandler = (ref) => (event) => {
 
 // "Set up AI" opens the Settings window (the user adds an AI service under Service -> AI).
 const openSettingsWindow = () => invoke('open_config_window');
+// Esc with nothing left to close hides the window, like Esc in the Translate window's text box.
+// Imported lazily: the window module reads Tauri metadata as soon as it is loaded.
+const hideCurrentWindow = () => import('@tauri-apps/api/window').then(({ appWindow }) => appWindow.hide());
 
 const NO_DICTIONARY = Object.freeze({
     state: { status: DictionaryStatus.IDLE },
@@ -76,6 +81,10 @@ export function SelectionActionPaletteView({
     aiSlot = null,
     defaultMoreOpen = false,
     openSettings = openSettingsWindow,
+    autoPlan = null,
+    autoDictionary = null,
+    hideWindow = hideCurrentWindow,
+    copyText = writeText,
 }) {
     const { t } = useTranslation();
     const toolbarRef = useRef(null);
@@ -85,6 +94,8 @@ export function SelectionActionPaletteView({
     const [editing, setEditing] = useState(false);
     const [managingCustom, setManagingCustom] = useState(false);
     const [moreOpen, setMoreOpen] = useState(defaultMoreOpen);
+    const slotRef = useRef(null);
+    const [copiedTranslation, setCopiedTranslation] = useState(false);
 
     const message = (code, fallback) =>
         t(`selection_actions.messages.${code}`, { defaultValue: fallback ?? messageFor(code) });
@@ -137,6 +148,115 @@ export function SelectionActionPaletteView({
     const aiCollapsed = bothOpen && expanded === 'dictionary';
     const dictionaryCollapsed = bothOpen && expanded === 'ai';
 
+    // Dictionary opens or closes (button and D key).
+    const toggleDictionary = () => {
+        if (dictionaryOpen) return dictionary.dismiss();
+        if (dictionaryItem) return run(dictionaryItem.actionId, dictionaryItem.params);
+    };
+    // The AI slot: its action, or "Set up AI" when no AI service is configured (button and A key).
+    const pressAiSlot = () => {
+        if (aiUnconfigured) return openSettings();
+        if (slotItem?.enabled) return runAi(slotItem);
+    };
+    const copyTranslation = async () => {
+        if (!translation.speakable || translation.speakText === '') return;
+        try {
+            await copyText(translation.speakText);
+            setCopiedTranslation(true);
+        } catch (_) {
+            setCopiedTranslation(false);
+        }
+    };
+    useEffect(() => {
+        setCopiedTranslation(false);
+    }, [ctx.text, translation.speakText]);
+    useEffect(() => {
+        if (!copiedTranslation) return;
+        const timer = setTimeout(() => setCopiedTranslation(false), 1500);
+        return () => clearTimeout(timer);
+    }, [copiedTranslation]);
+
+    // Esc closes one thing per press (editor, More, the expanded result panel, ...), else hides.
+    const escape = () => {
+        switch (
+            escapeTarget({
+                editingFavorites: editing,
+                managingCustom,
+                moreOpen,
+                aiOpen: aiRequestId !== null,
+                dictionaryOpen,
+                expanded,
+            })
+        ) {
+            case 'custom-editor':
+                return setManagingCustom(false);
+            case 'favorites-editor':
+                return setEditing(false);
+            case 'more':
+                return setMoreOpen(false);
+            case 'ai':
+                return ai?.dismiss();
+            case 'dictionary':
+                return dictionary.dismiss();
+            default:
+                return hideWindow();
+        }
+    };
+
+    // Window-wide keys (section 6 of the U0 design). Not while typing in a field or using an open
+    // menu. Capture phase: buttons wrapped in react-aria components stop keydown propagation.
+    const commandsRef = useRef(null);
+    commandsRef.current = (command) => {
+        switch (command.type) {
+            case PanelCommand.SPEAK_ORIGINAL:
+                return speakOriginalItem?.enabled && run(speakOriginalItem.actionId, speakOriginalItem.params);
+            case PanelCommand.DICTIONARY:
+                return dictionaryItem?.enabled && toggleDictionary();
+            case PanelCommand.AI_SLOT:
+                return ai && pressAiSlot();
+            case PanelCommand.MORE:
+                return setMoreOpen((v) => !v);
+            case PanelCommand.COPY_TRANSLATION:
+                return copyTranslation();
+            case PanelCommand.FAVORITE_LANGUAGE: {
+                const item = items.filter((x) => x.actionId === 'translate')[command.index];
+                return item?.enabled && run(item.actionId, item.params);
+            }
+            case PanelCommand.ESCAPE:
+                return escape();
+        }
+    };
+    useEffect(() => {
+        const onKeyDown = (event) => {
+            if (event.defaultPrevented) return;
+            const command = keyCommandFor(event, { targetHandlesKeys: isKeyHandlingTarget(event.target) });
+            if (!command) return;
+            event.preventDefault();
+            commandsRef.current(command);
+        };
+        window.addEventListener('keydown', onKeyDown, true);
+        return () => window.removeEventListener('keydown', onKeyDown, true);
+    }, []);
+
+    // Opening More (button or M) moves the focus into it, where the arrow keys and Enter work.
+    const moreOpenedRef = useRef(moreOpen);
+    useEffect(() => {
+        if (moreOpen && !moreOpenedRef.current) {
+            moreToolbarRef.current?.querySelector('button:not([disabled])')?.focus();
+        }
+        moreOpenedRef.current = moreOpen;
+    }, [moreOpen]);
+
+    // A sentence puts the focus on the AI slot (smart defaults), unless the user is already
+    // somewhere else in the window.
+    const focusSlot = autoPlan?.focusAiSlot === true;
+    useEffect(() => {
+        if (!focusSlot) return;
+        const active = document.activeElement;
+        if (active && active !== document.body) return;
+        slotRef.current?.focus();
+    }, [focusSlot, ctx.text]);
+
     // Action-row labels: always the accessible name and tooltip; the visible text is hidden by a
     // container query when the row is narrower than 340px (style.css, .sa-action-row).
     const label = (text) => <span className='sa-label'>{text}</span>;
@@ -148,6 +268,8 @@ export function SelectionActionPaletteView({
         if (!item.enabled) title = message(item.code, item.reason);
         else if (speaking) title = t('selection_actions.stop_speaking');
         else title = text;
+        const shortcut = kind === 'original' ? PanelCommand.SPEAK_ORIGINAL : null;
+        if (shortcut && item.enabled) title = withShortcut(title, shortcut);
         return (
             <Button
                 key={item.key}
@@ -157,6 +279,7 @@ export function SelectionActionPaletteView({
                 color={speaking ? 'primary' : 'default'}
                 aria-pressed={speaking}
                 aria-label={text}
+                aria-keyshortcuts={shortcut ? 'S' : undefined}
                 isDisabled={!item.enabled}
                 title={title}
                 className='h-[24px] min-w-0 px-2 text-[12px]'
@@ -203,11 +326,12 @@ export function SelectionActionPaletteView({
                         aria-pressed={dictionaryOpen}
                         aria-expanded={dictionaryOpen}
                         aria-label={t('selection_actions.dictionary')}
+                        aria-keyshortcuts='D'
                         isDisabled={!dictionaryItem.enabled}
-                        title={titleFor(dictionaryItem, t('selection_actions.dictionary'))}
+                        title={titleFor(dictionaryItem, withShortcut(t('selection_actions.dictionary'), PanelCommand.DICTIONARY))}
                         className='h-[24px] min-w-0 px-2 text-[12px]'
                         startContent={<MdMenuBook className='text-[14px]' />}
-                        onPress={() => run(dictionaryItem.actionId, dictionaryItem.params)}
+                        onPress={toggleDictionary}
                     >
                         {label(t('selection_actions.dictionary'))}
                     </Button>
@@ -218,9 +342,11 @@ export function SelectionActionPaletteView({
                         radius='sm'
                         variant='flat'
                         aria-label={t('selection_actions.ai.set_up')}
-                        title={message(ActionCode.AI_NOT_CONFIGURED)}
+                        aria-keyshortcuts='A'
+                        title={withShortcut(message(ActionCode.AI_NOT_CONFIGURED), PanelCommand.AI_SLOT)}
                         className='h-[24px] min-w-0 px-2 text-[12px]'
                         startContent={<MdAutoAwesome className='text-[14px]' />}
+                        ref={slotRef}
                         onPress={() => openSettings()}
                         data-testid='ai-set-up'
                     >
@@ -236,8 +362,10 @@ export function SelectionActionPaletteView({
                         color={slotItem.active ? 'primary' : 'default'}
                         aria-pressed={slotItem.active}
                         aria-label={aiLabel(slotItem)}
+                        aria-keyshortcuts='A'
                         isDisabled={!slotItem.enabled}
-                        title={titleFor(slotItem, aiLabel(slotItem))}
+                        title={titleFor(slotItem, withShortcut(aiLabel(slotItem), PanelCommand.AI_SLOT))}
+                        ref={slotRef}
                         className='h-[24px] min-w-0 max-w-[140px] px-2 text-[12px]'
                         startContent={<MdAutoAwesome className='text-[14px]' />}
                         onPress={() => runAi(slotItem)}
@@ -253,7 +381,8 @@ export function SelectionActionPaletteView({
                     aria-expanded={moreOpen}
                     aria-controls='selection-more'
                     aria-label={t('selection_actions.more')}
-                    title={t('selection_actions.more')}
+                    aria-keyshortcuts='M'
+                    title={withShortcut(t('selection_actions.more'), PanelCommand.MORE)}
                     className='h-[24px] min-w-0 px-2 text-[12px]'
                     startContent={<MdMoreHoriz className='text-[14px]' />}
                     onPress={() => setMoreOpen((v) => !v)}
@@ -289,6 +418,21 @@ export function SelectionActionPaletteView({
                         >
                             {t('selection_actions.edit_favorites')}
                         </Button>
+                        {autoDictionary && (
+                            <Button
+                                size='sm'
+                                radius='sm'
+                                variant={autoDictionary.enabled ? 'solid' : 'flat'}
+                                aria-pressed={autoDictionary.enabled}
+                                title={t('selection_actions.auto_dictionary_hint')}
+                                className='h-[24px] min-w-0 px-2 text-[12px]'
+                                startContent={<MdTouchApp className='text-[14px]' />}
+                                onPress={() => autoDictionary.set(!autoDictionary.enabled)}
+                                data-testid='auto-dictionary-toggle'
+                            >
+                                {t('selection_actions.auto_dictionary')}
+                            </Button>
+                        )}
                     </div>
 
                     {ai && (analysisItem || improveItems.length > 0) && (
@@ -451,6 +595,16 @@ export function SelectionActionPaletteView({
                     speaking={activeSpeech?.kind === 'original'}
                     speakingPending={activeSpeech?.kind === 'original' && activeSpeech.phase === 'pending'}
                 />
+            )}
+
+            {copiedTranslation && (
+                <span
+                    className='text-[11px] text-default-500'
+                    role='status'
+                    data-testid='translation-copied'
+                >
+                    {t('selection_actions.copied_translation')}
+                </span>
             )}
 
             {(translation.status === 'loading' || translation.status === 'error' || notice) && (

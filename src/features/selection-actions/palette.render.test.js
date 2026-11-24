@@ -177,7 +177,7 @@ describe('view states (loading / error / speaking) and safe text', () => {
     test('active speech shows a pressed, stoppable speak button', () => {
         const html = view({ activeSpeech: { kind: 'original', phase: 'playing' } });
         assert.match(button(html, 'Speak original'), /aria-pressed="true"/);
-        assert.match(button(html, 'Speak original'), /title="Stop speaking"/);
+        assert.match(button(html, 'Speak original'), /title="Stop speaking \(S\)"/);
         assert.match(button(html, 'Speak translation'), /aria-pressed="false"/);
     });
 

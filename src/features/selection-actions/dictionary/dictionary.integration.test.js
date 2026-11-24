@@ -485,3 +485,53 @@ describe('pronunciation delegates to the current TTS controller', () => {
         assert.equal(state().status, 'success');
     });
 });
+
+describe('automatic lookup (smart defaults: a new word or phrase opens the dictionary)', () => {
+    const auto = () => lookup({ auto: true });
+
+    test('a word is looked up and shown like a manual lookup', async () => {
+        const outcome = auto();
+        await tick();
+        assert.equal(state().status, 'loading');
+        cambridge.calls[0].resolve(entryPage('resilience'));
+        assert.equal((await outcome).status, 'completed');
+        assert.equal(state().status, 'success');
+    });
+
+    test('a sentence or text without letters is skipped without a panel or a request', async () => {
+        for (const text of ['The quick brown fox jumps over the lazy dog.', '!!! 123']) {
+            s.set('sourceText', text);
+            assert.equal((await auto()).status, 'skipped', text);
+            assert.equal(state().status, 'idle', text);
+        }
+        assert.equal(cambridge.calls.length, 0);
+    });
+
+    test('a language pair the source cannot serve leaves the panel closed, without a request', async () => {
+        s.set('targetLanguage', 'ja');
+        assert.equal((await auto()).status, 'skipped');
+        assert.equal(state().status, 'idle');
+        s.set('targetLanguage', 'en');
+        assert.equal((await auto()).status, 'skipped');
+        assert.equal(state().status, 'idle');
+        assert.equal(cambridge.calls.length, 0);
+    });
+
+    test('no entry or a provider failure closes the panel instead of showing an error', async () => {
+        for (const outcome of [{ page: 'not-found', match: 'none', entries: [] }, new Error('Http Status: 503')]) {
+            const running = auto();
+            await tick();
+            const call = cambridge.calls.at(-1);
+            outcome instanceof Error ? call.reject(outcome) : call.resolve(outcome);
+            assert.equal((await running).status, 'skipped');
+            assert.equal(state().status, 'idle');
+        }
+    });
+
+    test('a manual lookup of the same text still reports its errors', async () => {
+        s.set('targetLanguage', 'ja');
+        await auto();
+        await lookup();
+        assert.equal(state().status, 'error');
+    });
+});
