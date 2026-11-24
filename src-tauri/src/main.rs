@@ -22,6 +22,7 @@ mod tray;
 mod updater;
 mod voice_anywhere;
 mod window;
+mod write_back;
 
 use audio_cmd::*;
 use local_sidecar::{
@@ -309,6 +310,8 @@ fn main() {
             voice_inject_to_window,
             voice_copy_to_clipboard,
             voice_focus_and_paste,
+            write_back::can_replace_selection,
+            write_back::replace_selection,
             save_voice_anywhere_position,
             capture_voice_anywhere_target,
             show_voice_anywhere_window,

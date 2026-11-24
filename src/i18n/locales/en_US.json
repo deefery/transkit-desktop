@@ -1246,6 +1246,21 @@
       "translating": "Translating…",
       "edit_favorites": "Edit favorite languages",
       "more": "More",
+      "write_back": {
+        "replace": "Replace original",
+        "hint": "Paste this over the selected text in the app it came from",
+        "done": "Pasted over the original selection. The text is also on the clipboard.",
+        "copied_instead": "Could not replace the original ({{reason}}). The text is on the clipboard: paste it with Ctrl+V.",
+        "clipboard_failed": "Could not replace the original or copy the text.",
+        "reason": {
+          "no-source": "no original window",
+          "source-changed": "the text is not the original selection",
+          "source-closed": "the window was closed",
+          "focus-failed": "the window could not be brought to the front",
+          "paste-failed": "the paste was blocked",
+          "unsupported": "not supported on this system"
+        }
+      },
       "auto_dictionary": "Open dictionary for words",
       "auto_dictionary_hint": "Open the dictionary by itself when a word or short phrase is selected",
       "copied_translation": "Translation copied",

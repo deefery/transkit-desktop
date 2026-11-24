@@ -1093,6 +1093,21 @@
       "translating": "翻译中…",
       "edit_favorites": "编辑常用语言",
       "more": "更多",
+      "write_back": {
+        "replace": "替换原文",
+        "hint": "把这段文字粘贴到原来的应用里，替换选中的原文",
+        "done": "已粘贴到原选区，文本也已复制到剪贴板。",
+        "copied_instead": "无法替换原文（{{reason}}），文本已复制到剪贴板，可按 Ctrl+V 粘贴。",
+        "clipboard_failed": "无法替换原文，也无法复制文本。",
+        "reason": {
+          "no-source": "找不到原来的窗口",
+          "source-changed": "文本不是原来选中的内容",
+          "source-closed": "原窗口已关闭",
+          "focus-failed": "无法切换到原窗口",
+          "paste-failed": "粘贴被阻止",
+          "unsupported": "当前系统不支持"
+        }
+      },
       "auto_dictionary": "单词自动查词典",
       "auto_dictionary_hint": "选中单词或短语时自动展开词典",
       "copied_translation": "已复制译文",

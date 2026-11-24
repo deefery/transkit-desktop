@@ -10,6 +10,7 @@ import {
     MdClose,
     MdContentCopy,
     MdEditNote,
+    MdFindReplace,
     MdMenuBook,
     MdMoreHoriz,
     MdTouchApp,
@@ -38,6 +39,7 @@ import { PanelCommand, escapeTarget, isKeyHandlingTarget, keyCommandFor, withSho
 import { DictionaryPanel } from './dictionary/DictionaryPanel';
 import { DictionaryStatus } from './dictionary/controller';
 import { useSelectionActions } from './useSelectionActions';
+import { createWriteBack, offersWriteBack, writeBackMessage } from './writeBack';
 
 // Arrow keys move between the buttons of a toolbar (roving focus on top of normal Tab order). Bound in
 // the capture phase: a Tooltip-wrapped button (react-aria) stops keydown propagation, which would
@@ -54,6 +56,8 @@ const arrowKeyHandler = (ref) => (event) => {
 
 // "Set up AI" opens the Settings window (the user adds an AI service under Service -> AI).
 const openSettingsWindow = () => invoke('open_config_window');
+// Paste a rewrite over the original selection (W1; native side in src-tauri/src/write_back.rs).
+const nativeWriteBack = createWriteBack({ invoke });
 // Esc with nothing left to close hides the window, like Esc in the Translate window's text box.
 // Imported lazily: the window module reads Tauri metadata as soon as it is loaded.
 const hideCurrentWindow = () => import('@tauri-apps/api/window').then(({ appWindow }) => appWindow.hide());
@@ -84,6 +88,7 @@ export function SelectionActionPaletteView({
     autoPlan = null,
     autoDictionary = null,
     hideWindow = hideCurrentWindow,
+    writeBack = nativeWriteBack,
     copyText = writeText,
 }) {
     const { t } = useTranslation();
@@ -579,6 +584,7 @@ export function SelectionActionPaletteView({
                 <AiResultPanel
                     result={ai.result}
                     ai={ai}
+                    writeBack={writeBack}
                 />
             )}
 
@@ -705,12 +711,37 @@ const MARKDOWN_COMPONENTS = {
 const MARKDOWN_DISALLOWED = ['img', 'a', 'iframe', 'script', 'style'];
 
 // The AI result of the current selection, always labelled as AI output of a named service.
-export function AiResultPanel({ result, ai }) {
+export function AiResultPanel({ result, ai, writeBack = null }) {
     const { t } = useTranslation();
     const [copied, setCopied] = useState(false);
     useEffect(() => {
         setCopied(false);
     }, [result.requestId, result.status]);
+
+    // "Replace original" (W1): only for a finished plain-text rewrite whose selection still has
+    // its original window to paste into.
+    const offered = Boolean(writeBack) && offersWriteBack(result);
+    const [canReplace, setCanReplace] = useState(false);
+    const [replaceState, setReplaceState] = useState(null);
+    useEffect(() => {
+        setReplaceState(null);
+        setCanReplace(false);
+        if (!offered) return;
+        let cancelled = false;
+        writeBack.canReplace(result.text).then((ok) => {
+            if (!cancelled) setCanReplace(ok);
+        });
+        return () => {
+            cancelled = true;
+        };
+    }, [offered, result.requestId, result.text]);
+    const replaceOriginal = async () => {
+        setReplaceState({ running: true });
+        const outcome = await writeBack.replace(result.text, result.output);
+        setReplaceState({ running: false, message: writeBackMessage(outcome) });
+        if (outcome.ok) setCanReplace(false);
+    };
+    const replaceMessage = replaceState?.message;
     // A custom action's label is the user's own name: shown as is, never passed through i18n
     // interpolation.
     const label = result.labelKey ? t(result.labelKey, { defaultValue: result.defaultLabel }) : result.defaultLabel;
@@ -817,15 +848,44 @@ export function AiResultPanel({ result, ai }) {
                     ))}
             </div>
             {result.status === AiStatus.SUCCESS && (
-                <Button
-                    size='sm'
-                    variant='flat'
-                    className='h-[22px] min-w-0 self-start px-2 text-[12px]'
-                    startContent={<MdContentCopy className='text-[12px]' />}
-                    onPress={copy}
+                <div className='flex flex-wrap items-center gap-1'>
+                    <Button
+                        size='sm'
+                        variant='flat'
+                        className='h-[22px] min-w-0 px-2 text-[12px]'
+                        startContent={<MdContentCopy className='text-[12px]' />}
+                        onPress={copy}
+                    >
+                        {copied ? t('selection_actions.ai.copied') : t('selection_actions.ai.copy')}
+                    </Button>
+                    {offered && canReplace && (
+                        <Button
+                            size='sm'
+                            variant='flat'
+                            color='primary'
+                            className='h-[22px] min-w-0 px-2 text-[12px]'
+                            startContent={<MdFindReplace className='text-[12px]' />}
+                            title={t('selection_actions.write_back.hint')}
+                            isLoading={replaceState?.running === true}
+                            onPress={replaceOriginal}
+                            data-testid='ai-replace-original'
+                        >
+                            {t('selection_actions.write_back.replace')}
+                        </Button>
+                    )}
+                </div>
+            )}
+            {replaceMessage && (
+                <span
+                    className={`text-[11px] break-words ${replaceMessage.key === 'done' ? 'text-default-500' : 'text-warning-600'}`}
+                    role='status'
+                    data-testid='ai-replace-status'
+                    data-key={replaceMessage.key}
                 >
-                    {copied ? t('selection_actions.ai.copied') : t('selection_actions.ai.copy')}
-                </Button>
+                    {t(`selection_actions.write_back.${replaceMessage.key}`, {
+                        reason: replaceMessage.reason ? t(`selection_actions.write_back.reason.${replaceMessage.reason}`) : '',
+                    })}
+                </span>
             )}
         </section>
     );

@@ -257,11 +257,14 @@ fn translate_window() -> Window {
 
 pub fn selection_translate() {
     use selection::get_text;
+    // Write back (W1): the window the selection is made in, taken before reading it.
+    let source_window = crate::write_back::foreground_window();
     // Get Selected Text
     let text = get_text();
     if text.trim().is_empty() {
         return;
     }
+    crate::write_back::remember(source_window, &text);
     let app_handle = APP.get().unwrap();
     // Write into State
     let state: tauri::State<StringWrapper> = app_handle.state();
@@ -272,6 +275,7 @@ pub fn selection_translate() {
 }
 
 pub fn input_translate() {
+    crate::write_back::clear();
     let app_handle = APP.get().unwrap();
     // Clear State
     let state: tauri::State<StringWrapper> = app_handle.state();
@@ -293,6 +297,7 @@ pub fn input_translate() {
 }
 
 pub fn text_translate(text: String) {
+    crate::write_back::clear();
     let app_handle = APP.get().unwrap();
     // Clear State
     let state: tauri::State<StringWrapper> = app_handle.state();
@@ -302,6 +307,7 @@ pub fn text_translate(text: String) {
 }
 
 pub fn image_translate() {
+    crate::write_back::clear();
     let app_handle = APP.get().unwrap();
     let state: tauri::State<StringWrapper> = app_handle.state();
     state
