@@ -3,8 +3,12 @@ import { listen, emit } from '@tauri-apps/api/event';
 import { useGetState } from './useGetState';
 import { store } from '../utils/store';
 import { debounce } from '../utils';
+import { resolveConfigDefault } from '../utils/config_defaults';
 
-export const useConfig = (key, defaultValue, options = {}) => {
+export const useConfig = (key, callerDefault, options = {}) => {
+    // Keys with a canonical default ignore the caller's value, so the first-run result does not
+    // depend on which window reads the key first.
+    const defaultValue = resolveConfigDefault(key, callerDefault);
     const [property, setPropertyState, getProperty] = useGetState(null);
     const { sync = true } = options;
 
