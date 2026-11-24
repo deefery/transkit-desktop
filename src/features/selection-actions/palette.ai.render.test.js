@@ -109,17 +109,18 @@ describe('AI row of the palette', () => {
         assert.match(button(html, 'Work GPT'), /aria-label="AI service"/);
     });
 
-    test('actions are disabled with a visible reason when no AI service is configured', () => {
+    test('without an AI service the slot offers "Set up AI" and More shows no row of disabled AI buttons', () => {
         const html = viewHtml({ env: { aiServiceList: [] } });
-        for (const label of ['Analyze sentence', 'Natural', 'Correct grammar']) {
-            assert.match(button(html, label), /disabled/, label);
-            assert.match(button(html, label), /title="No AI service is configured\."/, label);
-        }
-        // The action row offers "Set up AI" in place of the slot, instead of a status line.
+        // The action row offers "Set up AI" in place of the slot, with the reason, instead of a status line.
         assert.match(html, /data-testid="ai-set-up"[^>]*title="No AI service is configured\. \(A\)"/);
         assert.doesNotMatch(html, /data-testid="ai-slot"/);
         assert.doesNotMatch(html, /role="status"[^>]*>No AI service is configured\./);
-        assert.match(button(html, 'Choose AI service'), /disabled/);
+        // More (open in this view) leaves the AI toolbar out (docs/fork/u0-selection-panel-design.md, 4.2).
+        assert.match(html, /data-testid="selection-more"/);
+        assert.doesNotMatch(html, /data-testid="selection-ai-actions"/);
+        for (const label of ['Analyze sentence', 'Natural', 'Correct grammar', 'Choose AI service']) {
+            assert.equal(button(html, label), '', label);
+        }
     });
 
     test('the action row slot shows Sentence Analysis by default and the recent AI action once one ran', () => {

@@ -87,6 +87,8 @@ describe('combined palette (headless Edge)', { skip }, () => {
         assert.deepEqual(k.escape3, { dictionary: false, dictionaryCollapsed: false, ai: false, aiCollapsed: false });
         assert.equal(k.hidesBefore, 0);
         assert.equal(k.hidesAfter, 1);
+        // The window-closing Esc handler of App.jsx never sees an Esc the panel handled.
+        assert.equal(k.documentEscapes, 0);
         assert.equal(k.afterA.ai, true);
     });
 

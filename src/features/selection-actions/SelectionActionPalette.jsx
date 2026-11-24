@@ -204,7 +204,9 @@ export function SelectionActionPaletteView({
     };
 
     // Window-wide keys (section 6 of the U0 design). Not while typing in a field or using an open
-    // menu. Capture phase: buttons wrapped in react-aria components stop keydown propagation.
+    // menu. Capture phase: buttons wrapped in react-aria components stop keydown propagation. A key
+    // the panel handles goes no further: App.jsx closes the whole window on any Esc that reaches the
+    // document, which would skip the one-thing-per-press order.
     const commandsRef = useRef(null);
     commandsRef.current = (command) => {
         switch (command.type) {
@@ -232,6 +234,7 @@ export function SelectionActionPaletteView({
             const command = keyCommandFor(event, { targetHandlesKeys: isKeyHandlingTarget(event.target) });
             if (!command) return;
             event.preventDefault();
+            event.stopPropagation();
             commandsRef.current(command);
         };
         window.addEventListener('keydown', onKeyDown, true);
@@ -423,6 +426,7 @@ export function SelectionActionPaletteView({
                                 size='sm'
                                 radius='sm'
                                 variant={autoDictionary.enabled ? 'solid' : 'flat'}
+                                color={autoDictionary.enabled ? 'primary' : 'default'}
                                 aria-pressed={autoDictionary.enabled}
                                 title={t('selection_actions.auto_dictionary_hint')}
                                 className='h-[24px] min-w-0 px-2 text-[12px]'
@@ -435,7 +439,8 @@ export function SelectionActionPaletteView({
                         )}
                     </div>
 
-                    {ai && (analysisItem || improveItems.length > 0) && (
+                    {/* Without an AI service the slot offers "Set up AI"; no row of disabled AI buttons. */}
+                    {ai && !aiUnconfigured && (analysisItem || improveItems.length > 0) && (
                         <div
                             ref={aiToolbarRef}
                             role='toolbar'

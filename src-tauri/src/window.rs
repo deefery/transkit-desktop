@@ -451,7 +451,8 @@ pub fn updater_window() {
     window.set_skip_taskbar(false).unwrap_or_default();
 }
 
-#[tauri::command]
+// async: a window created from a synchronous command never loads its page on Windows (Tauri v1).
+#[tauri::command(async)]
 pub fn open_config_window() {
     config_window();
 }

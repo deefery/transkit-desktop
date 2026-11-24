@@ -55,20 +55,31 @@ export const MAX_FAVORITE_SHORTCUTS = 4;
  * `targetHandlesKeys` is true when the focus is in a text field or an open menu/dialog, which keep
  * every key (typing, typeahead, their own Esc).
  */
+// Physical key of the event; synthesized input (some remappers, remote desktops) can arrive
+// without one, so a plain letter or digit `key` stands in for it.
+function physicalCode(event) {
+    if (typeof event.code === 'string' && event.code !== '') return event.code;
+    const key = typeof event.key === 'string' ? event.key : '';
+    if (/^[a-z]$/i.test(key)) return `Key${key.toUpperCase()}`;
+    if (/^[0-9]$/.test(key)) return `Digit${key}`;
+    return '';
+}
+
 export function keyCommandFor(event, { targetHandlesKeys = false } = {}) {
     if (!event || targetHandlesKeys) return null;
     // An input method is composing (e.g. Chinese/Japanese IME): the key belongs to it.
     if (event.isComposing || event.key === 'Process') return null;
     if (event.ctrlKey || event.metaKey) return null;
+    const code = physicalCode(event);
     if (event.altKey) {
         if (event.shiftKey) return null;
-        const match = /^(?:Digit|Numpad)([1-9])$/.exec(event.code ?? '');
+        const match = /^(?:Digit|Numpad)([1-9])$/.exec(code);
         const index = match ? Number(match[1]) - 1 : -1;
         return index >= 0 && index < MAX_FAVORITE_SHORTCUTS ? { type: PanelCommand.FAVORITE_LANGUAGE, index } : null;
     }
     if (event.key === 'Escape') return event.shiftKey ? null : { type: PanelCommand.ESCAPE };
     if (event.shiftKey || event.repeat) return null;
-    const type = LETTER_COMMANDS[event.code];
+    const type = LETTER_COMMANDS[code];
     return type ? { type } : null;
 }
 

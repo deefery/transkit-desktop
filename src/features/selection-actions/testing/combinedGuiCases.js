@@ -83,6 +83,11 @@ export async function run() {
     appWindow.hide = async () => {
         hides += 1;
     };
+    // Stand-in for App.jsx, which closes the whole window on any Esc that reaches the document.
+    let documentEscapes = 0;
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') documentEscapes += 1;
+    });
     createRoot(document.getElementById('root')).render(
         React.createElement(Provider, { store }, React.createElement(SelectionActionPalette, { serviceInstanceConfigMap: {} }))
     );
@@ -184,6 +189,7 @@ export async function run() {
     keys.hidesBefore = hides;
     await press('Escape');
     keys.hidesAfter = hides;
+    keys.documentEscapes = documentEscapes;
     await press('KeyA');
     await waitFor(() => q('ai-output'), 'AI slot run with A');
     keys.afterA = shown();

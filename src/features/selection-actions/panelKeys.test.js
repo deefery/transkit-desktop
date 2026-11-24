@@ -72,6 +72,13 @@ describe('keyCommandFor', () => {
         assert.deepEqual(K.keyCommandFor(key('KeyD', { key: 'в' })), { type: 'dictionary' });
     });
 
+    test('input without a physical key (no scan code) falls back to the key itself', () => {
+        assert.deepEqual(K.keyCommandFor(key('', { key: 'd' })), { type: 'dictionary' });
+        assert.deepEqual(K.keyCommandFor(key('', { key: '2', altKey: true })), { type: 'favorite-language', index: 1 });
+        assert.equal(K.keyCommandFor(key('', { key: 'в' })), null);
+        assert.equal(K.keyCommandFor(key('', { key: 'Enter' })), null);
+    });
+
     test('modified letters, repeats and IME composition are left alone', () => {
         assert.equal(K.keyCommandFor(key('KeyC', { ctrlKey: true })), null, 'Ctrl+C still copies the selection');
         assert.equal(K.keyCommandFor(key('KeyC', { metaKey: true })), null);
