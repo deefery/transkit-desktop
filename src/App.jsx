@@ -2,32 +2,25 @@ import { appWindow } from '@tauri-apps/api/window';
 import { BrowserRouter } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { warn } from 'tauri-plugin-log-api';
-import React, { useEffect } from 'react';
+import React, { Suspense, lazy, useEffect } from 'react';
 import { useTheme } from 'next-themes';
 
 import { invoke } from '@tauri-apps/api/tauri';
-import Screenshot from './window/Screenshot';
-import Translate from './window/Translate';
-import Recognize from './window/Recognize';
-import Updater from './window/Updater';
-import Monitor from './window/Monitor';
-import VoiceAnywhere from './window/VoiceAnywhere';
-import VoiceAnywhereCaption from './window/VoiceAnywhereCaption';
 import { store } from './utils/store';
-import Config from './window/Config';
 import { useConfig } from './hooks';
 import './style.css';
 import './i18n';
 
+// Each window loads only its own code: the page of a window imports just the module for its label.
 const windowMap = {
-    translate: <Translate />,
-    screenshot: <Screenshot />,
-    recognize: <Recognize />,
-    config: <Config />,
-    updater: <Updater />,
-    monitor: <Monitor />,
-    voice_anywhere: <VoiceAnywhere />,
-    voice_anywhere_caption: <VoiceAnywhereCaption />,
+    translate: lazy(() => import('./window/Translate')),
+    screenshot: lazy(() => import('./window/Screenshot')),
+    recognize: lazy(() => import('./window/Recognize')),
+    config: lazy(() => import('./window/Config')),
+    updater: lazy(() => import('./window/Updater')),
+    monitor: lazy(() => import('./window/Monitor')),
+    voice_anywhere: lazy(() => import('./window/VoiceAnywhere')),
+    voice_anywhere_caption: lazy(() => import('./window/VoiceAnywhereCaption')),
 };
 
 export default function App() {
@@ -119,5 +112,10 @@ export default function App() {
         }
     }, [appFont, appFallbackFont, appFontSize]);
 
-    return <BrowserRouter>{windowMap[appWindow.label]}</BrowserRouter>;
+    const Window = windowMap[appWindow.label];
+    return (
+        <BrowserRouter>
+            <Suspense fallback={null}>{Window ? <Window /> : null}</Suspense>
+        </BrowserRouter>
+    );
 }

@@ -36,7 +36,11 @@ const OAUTH_CALLBACK_PORT = 54321
 // Must use PKCE flow so the auth code arrives as a query param (?code=...)
 // which Rust's HTTP server can read. Implicit flow puts tokens in the hash
 // fragment (#access_token=...) which is never sent to the server.
-export const supabase: SupabaseClient | null = CLOUD_ENABLED
+//
+// The condition is spelled out here (same as CLOUD_ENABLED) so the bundler can evaluate it at build
+// time: in a build without cloud it is constant false and the Supabase client code is left out.
+const BUILD_HAS_CLOUD = import.meta.env.VITE_DISABLE_CLOUD !== 'true' && !!_url && !!_key
+export const supabase: SupabaseClient | null = BUILD_HAS_CLOUD
   ? createClient(_url!, _key!, { auth: { flowType: 'pkce' } })
   : null
 

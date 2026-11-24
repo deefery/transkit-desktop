@@ -17,7 +17,6 @@ import { atom, useAtom, useSetAtom } from 'jotai';
 import { getServiceName, getServiceSouceType, ServiceSourceType } from '../../../../utils/service_instance';
 import { useConfig, useSyncAtom, useVoice, useToastStyle } from '../../../../hooks';
 import { invoke_plugin } from '../../../../utils/invoke_plugin';
-import * as recognizeServices from '../../../../services/recognize';
 import * as builtinTtsServices from '../../../../services/tts';
 import { resolveActiveTtsInstanceKey, synthesizeSpeech } from '../../../../utils/tts_service';
 import detect from '../../../../utils/lang_detect';
@@ -122,6 +121,8 @@ export default function SourceArea(props) {
                     setSourceText('Language not supported');
                 }
             } else {
+                // OCR services (with their QR and Tesseract code) load only for image translation.
+                const recognizeServices = await import('../../../../services/recognize');
                 if (recognizeLanguage in recognizeServices[getServiceName(serviceInstanceKey)].Language) {
                     const instanceConfig = serviceInstanceConfigMap[serviceInstanceKey];
                     recognizeServices[getServiceName(serviceInstanceKey)]
