@@ -27,6 +27,20 @@ fn safe_set_selected(tray_handle: &tauri::SystemTrayHandle, id: &str, selected: 
     }
 }
 
+trait SystemTrayMenuExt {
+    fn add_item_if(self, condition: bool, item: CustomMenuItem) -> Self;
+}
+
+impl SystemTrayMenuExt for SystemTrayMenu {
+    fn add_item_if(self, condition: bool, item: CustomMenuItem) -> Self {
+        if condition {
+            self.add_item(item)
+        } else {
+            self
+        }
+    }
+}
+
 #[tauri::command]
 pub fn update_tray(app_handle: tauri::AppHandle, mut language: String, mut copy_mode: String) {
     let tray_handle = app_handle.tray_handle();
@@ -54,20 +68,28 @@ pub fn update_tray(app_handle: tauri::AppHandle, mut language: String, mut copy_
         "Update tray with language: {}, copy mode: {}",
         language, copy_mode
     );
+    // The fork ships without updater endpoints; hide "Check Update" instead of offering a dead item.
+    let show_update = app_handle
+        .config()
+        .tauri
+        .updater
+        .endpoints
+        .as_ref()
+        .map_or(false, |endpoints| !endpoints.is_empty());
     let menu = match language.as_str() {
-        "en" => tray_menu_en(),
-        "zh_cn" => tray_menu_zh_cn(),
-        "zh_tw" => tray_menu_zh_tw(),
-        "ja" => tray_menu_ja(),
-        "ko" => tray_menu_ko(),
-        "fr" => tray_menu_fr(),
-        "de" => tray_menu_de(),
-        "ru" => tray_menu_ru(),
-        "pt_br" => tray_menu_pt_br(),
-        "fa" => tray_menu_fa(),
-        "uk" => tray_menu_uk(),
-        "vi" | "vi_vn" => tray_menu_vi(),
-        _ => tray_menu_en(),
+        "en" => tray_menu_en(show_update),
+        "zh_cn" => tray_menu_zh_cn(show_update),
+        "zh_tw" => tray_menu_zh_tw(show_update),
+        "ja" => tray_menu_ja(show_update),
+        "ko" => tray_menu_ko(show_update),
+        "fr" => tray_menu_fr(show_update),
+        "de" => tray_menu_de(show_update),
+        "ru" => tray_menu_ru(show_update),
+        "pt_br" => tray_menu_pt_br(show_update),
+        "fa" => tray_menu_fa(show_update),
+        "uk" => tray_menu_uk(show_update),
+        "vi" | "vi_vn" => tray_menu_vi(show_update),
+        _ => tray_menu_en(show_update),
     };
     if let Err(e) = tray_handle.set_menu(menu) {
         warn!("[tray] set_menu failed: {:?}", e);
@@ -639,7 +661,7 @@ fn on_va_inject_click(app: &AppHandle, mode: &str) {
     update_tray(app.app_handle(), String::new(), String::new());
 }
 
-fn tray_menu_en() -> tauri::SystemTrayMenu {
+fn tray_menu_en(show_update: bool) -> tauri::SystemTrayMenu {
     let input_translate = CustomMenuItem::new("input_translate", "Input Translate");
     let audio_monitor = CustomMenuItem::new("audio_monitor", "Live Interpreter");
     let copy_source = CustomMenuItem::new("copy_source", "Source");
@@ -673,14 +695,14 @@ fn tray_menu_en() -> tauri::SystemTrayMenu {
         .add_submenu(build_voice_anywhere_submenu())
         .add_native_item(SystemTrayMenuItem::Separator)
         .add_item(config)
-        .add_item(check_update)
+        .add_item_if(show_update, check_update)
         .add_item(view_log)
         .add_native_item(SystemTrayMenuItem::Separator)
         .add_item(restart)
         .add_item(quit)
 }
 
-fn tray_menu_zh_cn() -> tauri::SystemTrayMenu {
+fn tray_menu_zh_cn(show_update: bool) -> tauri::SystemTrayMenu {
     let input_translate = CustomMenuItem::new("input_translate", "输入翻译");
     let clipboard_monitor = CustomMenuItem::new("clipboard_monitor", "监听剪切板");
     let copy_source = CustomMenuItem::new("copy_source", "原文");
@@ -690,7 +712,7 @@ fn tray_menu_zh_cn() -> tauri::SystemTrayMenu {
     let copy_disable = CustomMenuItem::new("copy_disable", "关闭");
     let ocr_recognize = CustomMenuItem::new("ocr_recognize", "文字识别");
     let ocr_translate = CustomMenuItem::new("ocr_translate", "截图翻译");
-    let audio_monitor = CustomMenuItem::new("audio_monitor", "音频监听");
+    let audio_monitor = CustomMenuItem::new("audio_monitor", "实时口译");
     let config = CustomMenuItem::new("config", "偏好设置");
     let check_update = CustomMenuItem::new("check_update", "检查更新");
     let restart = CustomMenuItem::new("restart", "重启应用");
@@ -715,14 +737,14 @@ fn tray_menu_zh_cn() -> tauri::SystemTrayMenu {
         .add_submenu(build_voice_anywhere_submenu())
         .add_native_item(SystemTrayMenuItem::Separator)
         .add_item(config)
-        .add_item(check_update)
+        .add_item_if(show_update, check_update)
         .add_item(view_log)
         .add_native_item(SystemTrayMenuItem::Separator)
         .add_item(restart)
         .add_item(quit)
 }
 
-fn tray_menu_zh_tw() -> tauri::SystemTrayMenu {
+fn tray_menu_zh_tw(show_update: bool) -> tauri::SystemTrayMenu {
     let input_translate = CustomMenuItem::new("input_translate", "輸入翻譯");
     let clipboard_monitor = CustomMenuItem::new("clipboard_monitor", "偵聽剪貼簿");
     let copy_source = CustomMenuItem::new("copy_source", "原文");
@@ -732,7 +754,7 @@ fn tray_menu_zh_tw() -> tauri::SystemTrayMenu {
     let copy_disable = CustomMenuItem::new("copy_disable", "關閉");
     let ocr_recognize = CustomMenuItem::new("ocr_recognize", "文字識別");
     let ocr_translate = CustomMenuItem::new("ocr_translate", "截圖翻譯");
-    let audio_monitor = CustomMenuItem::new("audio_monitor", "音訊監聽");
+    let audio_monitor = CustomMenuItem::new("audio_monitor", "即時口譯");
     let config = CustomMenuItem::new("config", "偏好設定");
     let check_update = CustomMenuItem::new("check_update", "檢查更新");
     let restart = CustomMenuItem::new("restart", "重啓程式");
@@ -757,14 +779,14 @@ fn tray_menu_zh_tw() -> tauri::SystemTrayMenu {
         .add_submenu(build_voice_anywhere_submenu())
         .add_native_item(SystemTrayMenuItem::Separator)
         .add_item(config)
-        .add_item(check_update)
+        .add_item_if(show_update, check_update)
         .add_item(view_log)
         .add_native_item(SystemTrayMenuItem::Separator)
         .add_item(restart)
         .add_item(quit)
 }
 
-fn tray_menu_ja() -> tauri::SystemTrayMenu {
+fn tray_menu_ja(show_update: bool) -> tauri::SystemTrayMenu {
     let input_translate = CustomMenuItem::new("input_translate", "翻訳を入力");
     let clipboard_monitor = CustomMenuItem::new("clipboard_monitor", "クリップボードを監視する");
     let copy_source = CustomMenuItem::new("copy_source", "原文");
@@ -774,7 +796,7 @@ fn tray_menu_ja() -> tauri::SystemTrayMenu {
     let copy_disable = CustomMenuItem::new("copy_disable", "閉じる");
     let ocr_recognize = CustomMenuItem::new("ocr_recognize", "テキスト認識");
     let ocr_translate = CustomMenuItem::new("ocr_translate", "スクリーンショットの翻訳");
-    let audio_monitor = CustomMenuItem::new("audio_monitor", "音声モニター");
+    let audio_monitor = CustomMenuItem::new("audio_monitor", "Live Interpreter");
     let config = CustomMenuItem::new("config", "プリファレンス設定");
     let check_update = CustomMenuItem::new("check_update", "更新を確認する");
     let restart = CustomMenuItem::new("restart", "アプリの再起動");
@@ -799,14 +821,14 @@ fn tray_menu_ja() -> tauri::SystemTrayMenu {
         .add_submenu(build_voice_anywhere_submenu())
         .add_native_item(SystemTrayMenuItem::Separator)
         .add_item(config)
-        .add_item(check_update)
+        .add_item_if(show_update, check_update)
         .add_item(view_log)
         .add_native_item(SystemTrayMenuItem::Separator)
         .add_item(restart)
         .add_item(quit)
 }
 
-fn tray_menu_ko() -> tauri::SystemTrayMenu {
+fn tray_menu_ko(show_update: bool) -> tauri::SystemTrayMenu {
     let input_translate = CustomMenuItem::new("input_translate", "입력 번역");
     let clipboard_monitor = CustomMenuItem::new("clipboard_monitor", "감청 전단판");
     let copy_source = CustomMenuItem::new("copy_source", "원문");
@@ -816,7 +838,7 @@ fn tray_menu_ko() -> tauri::SystemTrayMenu {
     let copy_disable = CustomMenuItem::new("copy_disable", "닫기");
     let ocr_recognize = CustomMenuItem::new("ocr_recognize", "문자인식");
     let ocr_translate = CustomMenuItem::new("ocr_translate", "스크린샷 번역");
-    let audio_monitor = CustomMenuItem::new("audio_monitor", "오디오 모니터");
+    let audio_monitor = CustomMenuItem::new("audio_monitor", "Live Interpreter");
     let config = CustomMenuItem::new("config", "기본 설정");
     let check_update = CustomMenuItem::new("check_update", "업데이트 확인");
     let restart = CustomMenuItem::new("restart", "응용 프로그램 다시 시작");
@@ -841,14 +863,14 @@ fn tray_menu_ko() -> tauri::SystemTrayMenu {
         .add_submenu(build_voice_anywhere_submenu())
         .add_native_item(SystemTrayMenuItem::Separator)
         .add_item(config)
-        .add_item(check_update)
+        .add_item_if(show_update, check_update)
         .add_item(view_log)
         .add_native_item(SystemTrayMenuItem::Separator)
         .add_item(restart)
         .add_item(quit)
 }
 
-fn tray_menu_fr() -> tauri::SystemTrayMenu {
+fn tray_menu_fr(show_update: bool) -> tauri::SystemTrayMenu {
     let input_translate = CustomMenuItem::new("input_translate", "Traduction d'entrée");
     let clipboard_monitor =
         CustomMenuItem::new("clipboard_monitor", "Surveiller le presse-papiers");
@@ -859,7 +881,7 @@ fn tray_menu_fr() -> tauri::SystemTrayMenu {
     let copy_disable = CustomMenuItem::new("copy_disable", "Désactiver");
     let ocr_recognize = CustomMenuItem::new("ocr_recognize", "Reconnaissance de texte");
     let ocr_translate = CustomMenuItem::new("ocr_translate", "Traduction d'image");
-    let audio_monitor = CustomMenuItem::new("audio_monitor", "Moniteur Audio");
+    let audio_monitor = CustomMenuItem::new("audio_monitor", "Live Interpreter");
     let config = CustomMenuItem::new("config", "Paramètres");
     let check_update = CustomMenuItem::new("check_update", "Vérifier les mises à jour");
     let restart = CustomMenuItem::new("restart", "Redémarrer l'application");
@@ -884,13 +906,13 @@ fn tray_menu_fr() -> tauri::SystemTrayMenu {
         .add_submenu(build_voice_anywhere_submenu())
         .add_native_item(SystemTrayMenuItem::Separator)
         .add_item(config)
-        .add_item(check_update)
+        .add_item_if(show_update, check_update)
         .add_item(view_log)
         .add_native_item(SystemTrayMenuItem::Separator)
         .add_item(restart)
         .add_item(quit)
 }
-fn tray_menu_de() -> tauri::SystemTrayMenu {
+fn tray_menu_de(show_update: bool) -> tauri::SystemTrayMenu {
     let input_translate = CustomMenuItem::new("input_translate", "Eingabeübersetzung");
     let clipboard_monitor = CustomMenuItem::new("clipboard_monitor", "Zwischenablage überwachen");
     let copy_source = CustomMenuItem::new("copy_source", "Quelle");
@@ -900,7 +922,7 @@ fn tray_menu_de() -> tauri::SystemTrayMenu {
     let copy_disable = CustomMenuItem::new("copy_disable", "Deaktivieren");
     let ocr_recognize = CustomMenuItem::new("ocr_recognize", "Texterkennung");
     let ocr_translate = CustomMenuItem::new("ocr_translate", "Bildübersetzung");
-    let audio_monitor = CustomMenuItem::new("audio_monitor", "Audio-Monitor");
+    let audio_monitor = CustomMenuItem::new("audio_monitor", "Live Interpreter");
     let config = CustomMenuItem::new("config", "Einstellungen");
     let check_update = CustomMenuItem::new("check_update", "Auf Updates prüfen");
     let restart = CustomMenuItem::new("restart", "Anwendung neu starten");
@@ -925,14 +947,14 @@ fn tray_menu_de() -> tauri::SystemTrayMenu {
         .add_submenu(build_voice_anywhere_submenu())
         .add_native_item(SystemTrayMenuItem::Separator)
         .add_item(config)
-        .add_item(check_update)
+        .add_item_if(show_update, check_update)
         .add_item(view_log)
         .add_native_item(SystemTrayMenuItem::Separator)
         .add_item(restart)
         .add_item(quit)
 }
 
-fn tray_menu_ru() -> tauri::SystemTrayMenu {
+fn tray_menu_ru(show_update: bool) -> tauri::SystemTrayMenu {
     let input_translate = CustomMenuItem::new("input_translate", "Ввод перевода");
     let clipboard_monitor = CustomMenuItem::new("clipboard_monitor", "Следить за буфером обмена");
     let copy_source = CustomMenuItem::new("copy_source", "Источник");
@@ -942,7 +964,7 @@ fn tray_menu_ru() -> tauri::SystemTrayMenu {
     let copy_disable = CustomMenuItem::new("copy_disable", "Отключить");
     let ocr_recognize = CustomMenuItem::new("ocr_recognize", "Распознавание текста");
     let ocr_translate = CustomMenuItem::new("ocr_translate", "Перевод изображения");
-    let audio_monitor = CustomMenuItem::new("audio_monitor", "Аудио монитор");
+    let audio_monitor = CustomMenuItem::new("audio_monitor", "Live Interpreter");
     let config = CustomMenuItem::new("config", "Настройки");
     let check_update = CustomMenuItem::new("check_update", "Проверить обновления");
     let restart = CustomMenuItem::new("restart", "Перезапустить приложение");
@@ -967,14 +989,14 @@ fn tray_menu_ru() -> tauri::SystemTrayMenu {
         .add_submenu(build_voice_anywhere_submenu())
         .add_native_item(SystemTrayMenuItem::Separator)
         .add_item(config)
-        .add_item(check_update)
+        .add_item_if(show_update, check_update)
         .add_item(view_log)
         .add_native_item(SystemTrayMenuItem::Separator)
         .add_item(restart)
         .add_item(quit)
 }
 
-fn tray_menu_fa() -> tauri::SystemTrayMenu {
+fn tray_menu_fa(show_update: bool) -> tauri::SystemTrayMenu {
     let input_translate = CustomMenuItem::new("input_translate", "متن");
     let clipboard_monitor = CustomMenuItem::new("clipboard_monitor", "گوش دادن به تخته برش");
     let copy_source = CustomMenuItem::new("copy_source", "منبع");
@@ -984,7 +1006,7 @@ fn tray_menu_fa() -> tauri::SystemTrayMenu {
     let copy_disable = CustomMenuItem::new("copy_disable", "متن");
     let ocr_recognize = CustomMenuItem::new("ocr_recognize", "تشخیص متن");
     let ocr_translate = CustomMenuItem::new("ocr_translate", "ترجمه عکس");
-    let audio_monitor = CustomMenuItem::new("audio_monitor", "نظارت صوتی");
+    let audio_monitor = CustomMenuItem::new("audio_monitor", "Live Interpreter");
     let config = CustomMenuItem::new("config", "تنظیمات ترجیح");
     let check_update = CustomMenuItem::new("check_update", "بررسی بروزرسانی");
     let restart = CustomMenuItem::new("restart", "راه‌اندازی مجدد برنامه");
@@ -1009,14 +1031,14 @@ fn tray_menu_fa() -> tauri::SystemTrayMenu {
         .add_submenu(build_voice_anywhere_submenu())
         .add_native_item(SystemTrayMenuItem::Separator)
         .add_item(config)
-        .add_item(check_update)
+        .add_item_if(show_update, check_update)
         .add_item(view_log)
         .add_native_item(SystemTrayMenuItem::Separator)
         .add_item(restart)
         .add_item(quit)
 }
 
-fn tray_menu_pt_br() -> tauri::SystemTrayMenu {
+fn tray_menu_pt_br(show_update: bool) -> tauri::SystemTrayMenu {
     let input_translate = CustomMenuItem::new("input_translate", "Traduzir Entrada");
     let clipboard_monitor =
         CustomMenuItem::new("clipboard_monitor", "Monitorando a área de transferência");
@@ -1027,7 +1049,7 @@ fn tray_menu_pt_br() -> tauri::SystemTrayMenu {
     let copy_disable = CustomMenuItem::new("copy_disable", "Desabilitar");
     let ocr_recognize = CustomMenuItem::new("ocr_recognize", "Reconhecimento de Texto");
     let ocr_translate = CustomMenuItem::new("ocr_translate", "Tradução de Imagem");
-    let audio_monitor = CustomMenuItem::new("audio_monitor", "Monitor de Áudio");
+    let audio_monitor = CustomMenuItem::new("audio_monitor", "Live Interpreter");
     let config = CustomMenuItem::new("config", "Configurações");
     let check_update = CustomMenuItem::new("check_update", "Checar por Atualização");
     let restart = CustomMenuItem::new("restart", "Reiniciar aplicativo");
@@ -1052,14 +1074,14 @@ fn tray_menu_pt_br() -> tauri::SystemTrayMenu {
         .add_submenu(build_voice_anywhere_submenu())
         .add_native_item(SystemTrayMenuItem::Separator)
         .add_item(config)
-        .add_item(check_update)
+        .add_item_if(show_update, check_update)
         .add_item(view_log)
         .add_native_item(SystemTrayMenuItem::Separator)
         .add_item(restart)
         .add_item(quit)
 }
 
-fn tray_menu_uk() -> tauri::SystemTrayMenu {
+fn tray_menu_uk(show_update: bool) -> tauri::SystemTrayMenu {
     let input_translate = CustomMenuItem::new("input_translate", "Введення перекладу");
     let clipboard_monitor = CustomMenuItem::new("clipboard_monitor", "Стежити за буфером обміну");
     let copy_source = CustomMenuItem::new("copy_source", "Джерело");
@@ -1069,7 +1091,7 @@ fn tray_menu_uk() -> tauri::SystemTrayMenu {
     let copy_disable = CustomMenuItem::new("copy_disable", "Відключивши");
     let ocr_recognize = CustomMenuItem::new("ocr_recognize", "Розпізнавання тексту");
     let ocr_translate = CustomMenuItem::new("ocr_translate", "Переклад зображення");
-    let audio_monitor = CustomMenuItem::new("audio_monitor", "Аудіо монітор");
+    let audio_monitor = CustomMenuItem::new("audio_monitor", "Live Interpreter");
     let config = CustomMenuItem::new("config", "Настройка");
     let check_update = CustomMenuItem::new("check_update", "Перевірити оновлення");
     let restart = CustomMenuItem::new("restart", "Перезапустити додаток");
@@ -1094,14 +1116,14 @@ fn tray_menu_uk() -> tauri::SystemTrayMenu {
         .add_submenu(build_voice_anywhere_submenu())
         .add_native_item(SystemTrayMenuItem::Separator)
         .add_item(config)
-        .add_item(check_update)
+        .add_item_if(show_update, check_update)
         .add_item(view_log)
         .add_native_item(SystemTrayMenuItem::Separator)
         .add_item(restart)
         .add_item(quit)
 }
 
-fn tray_menu_vi() -> tauri::SystemTrayMenu {
+fn tray_menu_vi(show_update: bool) -> tauri::SystemTrayMenu {
     let input_translate = CustomMenuItem::new("input_translate", "Mở hộp thoại dịch");
     let audio_monitor = CustomMenuItem::new("audio_monitor", "Phiên dịch trực tiếp");
     let clipboard_monitor = CustomMenuItem::new("clipboard_monitor", "Dịch từ clipboard");
@@ -1134,7 +1156,7 @@ fn tray_menu_vi() -> tauri::SystemTrayMenu {
         .add_submenu(build_voice_anywhere_submenu())
         .add_native_item(SystemTrayMenuItem::Separator)
         .add_item(config)
-        .add_item(check_update)
+        .add_item_if(show_update, check_update)
         .add_native_item(SystemTrayMenuItem::Separator)
         .add_item(restart)
         .add_item(quit)
