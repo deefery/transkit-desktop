@@ -22,6 +22,7 @@ mod tray;
 mod updater;
 mod voice_anywhere;
 mod window;
+mod on_demand;
 mod write_back;
 
 use audio_cmd::*;
@@ -194,7 +195,7 @@ fn main() {
                 .and_then(|v| v.as_bool())
                 .unwrap_or(false)
             {
-                window::voice_anywhere_window();
+                window::voice_anywhere_window_show_only();
             }
             // Auto-start Local Sidecar if enabled
             if get("local_sidecar_enabled")

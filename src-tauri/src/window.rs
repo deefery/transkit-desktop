@@ -463,11 +463,14 @@ pub fn open_config_window() {
     config_window();
 }
 
-/// Tauri command: show the Voice Anywhere FAB (same as pressing the hotkey).
-/// Called from the Config window when "Always visible" is enabled.
-#[tauri::command]
+/// Tauri command: show the Voice Anywhere FAB.
+/// Called from the Config window when "Always visible" is enabled. Showing the button does not
+/// start recording; only the hotkey does.
+/// async: the window may be created here, and a window created from a synchronous command never
+/// loads its page on Windows (Tauri v1).
+#[tauri::command(async)]
 pub fn show_voice_anywhere_window() {
-    voice_anywhere_window();
+    voice_anywhere_window_show_only();
 }
 
 /// Tauri command: hide the Voice Anywhere FAB.
@@ -488,6 +491,15 @@ pub fn hide_voice_anywhere_window() {
 /// an in-use application — that is why it is declared with `focus: false` in
 /// tauri.conf.json.
 pub fn voice_anywhere_window() {
+    show_voice_anywhere(true);
+}
+
+/// Show the FAB without the recording trigger ("Always visible" at startup and in Settings).
+pub fn voice_anywhere_window_show_only() {
+    show_voice_anywhere(false);
+}
+
+fn show_voice_anywhere(trigger: bool) {
     let app_handle = APP.get().unwrap();
 
     // Record the currently focused Transkit window BEFORE showing the FAB.
@@ -508,7 +520,11 @@ pub fn voice_anywhere_window() {
     // Capture the frontmost external (non-Transkit) app for the "paste" inject mode.
     crate::voice_anywhere::capture_last_external_app(app_handle);
 
-    if let Some(window) = app_handle.get_window("voice_anywhere") {
+    // Created on first use (P2); its caption window is created with it so it is ready to show.
+    if let Some((window, created)) = crate::on_demand::window(crate::on_demand::VOICE_ANYWHERE) {
+        if created {
+            let _ = crate::on_demand::window(crate::on_demand::VOICE_ANYWHERE_CAPTION);
+        }
         // Disable the native OS window shadow for the FAB.
         // The shadow follows the window rectangle (not the circular FAB shape)
         // and creates a visible gray/blue border around the icon. CSS box-shadow
@@ -557,20 +573,30 @@ pub fn voice_anywhere_window() {
         }
 
         // Send a trigger event so the React component can start recording if
-        // `voice_anywhere_autostart` is enabled.
-        window.emit("voice_anywhere_trigger", ()).unwrap_or_default();
+        // `voice_anywhere_autostart` is enabled. A page created just now is not listening yet,
+        // so the trigger waits for its "ready" event.
+        if trigger {
+            if created {
+                let ready = window.clone();
+                window.once("voice_anywhere_ready", move |_| {
+                    ready.emit("voice_anywhere_trigger", ()).unwrap_or_default();
+                });
+            } else {
+                window.emit("voice_anywhere_trigger", ()).unwrap_or_default();
+            }
+        }
         window.show().unwrap_or_default();
     } else {
-        warn!("voice_anywhere window not found — check tauri.conf.json");
+        warn!("voice_anywhere window could not be created");
     }
 }
 
 pub fn monitor_window() {
-    let app_handle = APP.get().unwrap();
-    // The monitor window is pre-declared in tauri.conf.json (transparent: true, visible: false).
+    // The monitor window is created on first use (P2, on_demand.rs) with the properties it used to
+    // have in tauri.conf.json (transparent: true, visible: false).
     // macOSPrivateApi: true ensures Tauri sets up WKWebView transparency properly at creation time,
     // avoiding manual ObjC calls and the GCD-dispatch panic that those can trigger.
-    if let Some(window) = app_handle.get_window("monitor") {
+    if let Some((window, _)) = crate::on_demand::window(crate::on_demand::MONITOR) {
         // Enable shadow so Windows/macOS DWM properly composites rounded corners.
         // Without this the transparent window corners render as white squares on Windows.
         #[cfg(not(target_os = "linux"))]

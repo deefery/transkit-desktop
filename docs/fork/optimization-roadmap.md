@@ -186,6 +186,7 @@ flowchart LR
 | W1 | 已完成：AI 改写结果（润色各预设、自定义动作；"分析句子"除外）旁加"替换原文"，把结果粘贴回原应用、替换选中的原文。原窗口只在划词快捷键触发时由原生端记录，前端只传文字，无法指定窗口；原文必须与当时选中的文字一致；输入翻译、HTTP 接口、剪贴板监听的文字不会写回；结果总是先放进剪贴板，原窗口已关闭、无法切到前台等情况会说明原因并提示手动粘贴；成功后不再提供第二次替换。目前只支持 Windows。真实环境中已验证：记事本、Edge 文本框、Word 新文档都只替换了选中的部分；关闭原窗口后按"替换原文"会提示并保留剪贴板 | 直接合并 |
 | V0 | 已完成：release 构建实测，方法和结果见 [v0-performance-baseline.md](v0-performance-baseline.md)，脚本 `scripts/fork/perf-baseline.mjs` 可重复执行。空闲时 4 个页面常驻（daemon、Live Interpreter、Voice Anywhere 及字幕窗），每个窗口都加载同一个 3.3 MB 的 JS 包；冷启动未测 | 直接合并 |
 | P1 | 已完成：各窗口按需加载代码；无云构建不再打包 Supabase；翻译窗只在截图翻译时加载 OCR。翻译窗的 JS 从 3322 KB 降到 1545 KB，字幕窗和截图窗降到约 480 KB。同一会话与 V0 对比：首次弹窗 816 → 669 ms，空闲私有内存 323 → 287 MB。界面语言按需加载未做。详见 [v0-performance-baseline.md](v0-performance-baseline.md) 第 8 节 | 直接合并 |
+| P2 | 已完成：Live Interpreter、Voice Anywhere 及字幕窗改为第一次用到时创建，启动时只剩 daemon 页面（"始终显示"开启时仍启动即创建按钮）。同一会话与 P1 对比：空闲私有内存 292 → 134 MB，进程 10 → 7，启动 1044 → 548 ms；首次弹窗慢约 50 ms（范围重叠）。真实快捷键验收通过；录音只由快捷键触发，设置里打开"始终显示"不再自动开始录音。详见 [v0-performance-baseline.md](v0-performance-baseline.md) 第 9 节 | 直接合并 |
 | 其他 | 未开始 | — |
 
 > U1、U2、A2 真实窗口检查时发现、留给 F1 的问题：本机网络下 Bing 每次都报 "Get Token Failed"，而划词窗口总是先显示第一个服务（Bing）；切换服务的按钮平时透明，悬停才出现；同一个错误在结果卡片和面板底部各显示一次。

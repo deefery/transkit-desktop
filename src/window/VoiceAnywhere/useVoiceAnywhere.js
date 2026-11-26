@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { listen } from '@tauri-apps/api/event';
+import { emit, listen } from '@tauri-apps/api/event';
 import { invoke } from '@tauri-apps/api/tauri';
 import { useTranslation } from 'react-i18next';
 import { store } from '../../utils/store';
@@ -666,7 +666,12 @@ export function useVoiceAnywhere({ sttServiceKey, monitorSvcKey, language, targe
                 if (isRecordingRef.current) await stopRecording();
                 else await startRecording();
             }
-        }).then((fn) => { unlistenTriggerRef.current = fn; });
+        }).then((fn) => {
+            unlistenTriggerRef.current = fn;
+            // The window may have been created by the hotkey just now (P2): tell Rust the page is
+            // listening, so the hotkey's trigger can be delivered.
+            emit('voice_anywhere_ready').catch(() => {});
+        });
         return () => {
             mounted = false;
             unlistenTriggerRef.current?.();

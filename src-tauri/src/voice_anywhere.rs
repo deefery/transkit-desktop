@@ -280,7 +280,9 @@ pub fn voice_focus_and_paste(text: String) -> Result<(), String> {
     }
 }
 
-#[tauri::command]
+// async: the caption window may be created here (P2), and a window created from a synchronous
+// command never loads its page on Windows (Tauri v1).
+#[tauri::command(async)]
 pub fn show_voice_anywhere_caption(
     x: f64,
     y: f64,
@@ -291,10 +293,8 @@ pub fn show_voice_anywhere_caption(
     error_msg: String,
     fab_state: String,
 ) -> Result<(), String> {
-    let app = APP.get().unwrap();
-    let window = app
-        .get_window("voice_anywhere_caption")
-        .ok_or_else(|| "voice_anywhere_caption window not found".to_string())?;
+    let (window, _) = crate::on_demand::window(crate::on_demand::VOICE_ANYWHERE_CAPTION)
+        .ok_or_else(|| "voice_anywhere_caption window could not be created".to_string())?;
 
     #[cfg(any(target_os = "macos", target_os = "windows"))]
     set_shadow(&window, false).ok();
