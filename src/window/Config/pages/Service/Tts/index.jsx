@@ -9,6 +9,8 @@ import SelectPluginModal from '../SelectPluginModal';
 import { osType } from '../../../../../utils/env';
 import { useConfig, deleteKey } from '../../../../../hooks';
 import ServiceItem from './ServiceItem';
+import { TestAllButton } from '../ServiceHealth';
+import { ServiceKind } from '../serviceTests';
 import SelectModal from './SelectModal';
 import ConfigModal from './ConfigModal';
 
@@ -111,6 +113,12 @@ export default function Tts(props) {
                         )}
                     </Droppable>
                 </DragDropContext>
+                <Spacer y={2} />
+                <TestAllButton
+                    kind={ServiceKind.TTS}
+                    instanceKeys={ttsServiceInstanceList ?? []}
+                    pluginList={pluginList}
+                />
                 <Spacer y={2} />
                 <div className='flex'>
                     <Button

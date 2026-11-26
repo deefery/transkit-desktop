@@ -5,6 +5,9 @@ import { useTranslation } from 'react-i18next';
 import { BiSolidEdit } from 'react-icons/bi';
 import React from 'react';
 
+import ServiceHealth from '../../ServiceHealth';
+import { ServiceKind } from '../../serviceTests';
+
 import * as builtinServices from '../../../../../../services/translate';
 import { useConfig } from '../../../../../../hooks';
 import { INSTANCE_NAME_CONFIG_KEY, ServiceSourceType, getDisplayInstanceName, getServiceName, getServiceSouceType } from '../../../../../../utils/service_instance';
@@ -66,7 +69,12 @@ export default function ServiceItem(props) {
                         </>
                     )}
                 </div>
-                <div className='flex'>
+                <div className='flex items-center'>
+                    <ServiceHealth
+                        kind={ServiceKind.TRANSLATE}
+                        instanceKey={serviceInstanceKey}
+                        pluginList={pluginList}
+                    />
                     <Switch
                         size='sm'
                         isSelected={serviceInstanceConfig['enable'] ?? true}

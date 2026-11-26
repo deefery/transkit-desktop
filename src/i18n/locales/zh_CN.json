@@ -196,6 +196,17 @@
         "collection": "生词本",
         "least": "请至少保留一个",
         "add_builtin_service": "添加内置服务",
+        "health": {
+          "untested": "尚未测试",
+          "ok": "正常",
+          "failed": "失败",
+          "test": "测试",
+          "test_all": "全部测试",
+          "source": {
+            "test": "测试结果",
+            "use": "翻译时记录"
+          }
+        },
         "add_external_service": "添加外部插件",
         "add_service": "添加服务",
         "test_failed": "测试失败",

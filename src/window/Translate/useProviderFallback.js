@@ -6,6 +6,15 @@ import { translationRecordsAtom } from '../../features/selection-actions/transla
 import { sourceTextAtom } from './components/SourceArea';
 import { sourceLanguageAtom, targetLanguageAtom } from './components/LanguageArea';
 import { AUTO_FALLBACK_CONFIG_KEY, createFallbackController, enabledProviders } from './providerFallback';
+import { emit } from '@tauri-apps/api/event';
+import { store as configStore } from '../../utils/store';
+import { HealthSource, recordServiceOutcome } from '../../utils/service_health';
+
+// Real-use outcome of a provider for the service health in Settings (H1); best effort.
+const recordUse = (instanceKey, ok, error) =>
+    recordServiceOutcome({ store: configStore, emit, instanceKey, outcome: { ok, error, source: HealthSource.USE } }).catch(
+        () => {}
+    );
 
 /**
  * Provider fallback for the Translate window (roadmap task F1). The window shows one provider at a
@@ -70,12 +79,14 @@ export function useProviderFallback({ list, configMap, selectedIndex, setSelecte
         if (JSON.stringify([record.text, record.sourceLanguage, record.targetLanguage]) !== requestKey) return;
         if (record.status === 'success') {
             controller.onSuccess(record.instanceKey);
+            recordUse(record.instanceKey, true);
             return;
         }
         if (record.status !== 'error') return;
         const id = `${record.instanceKey}#${record.requestId}`;
         if (handledRef.current.has(id)) return;
         handledRef.current.add(id);
+        recordUse(record.instanceKey, false, record.error);
         const { kind, next } = controller.onFailure({
             requestKey,
             provider: record.instanceKey,

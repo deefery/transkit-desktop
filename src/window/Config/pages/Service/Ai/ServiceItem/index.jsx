@@ -5,6 +5,9 @@ import { useTranslation } from 'react-i18next';
 import { BiSolidEdit } from 'react-icons/bi';
 import React from 'react';
 
+import ServiceHealth from '../../ServiceHealth';
+import { ServiceKind } from '../../serviceTests';
+
 import {
     INSTANCE_NAME_CONFIG_KEY,
     ServiceSourceType,
@@ -71,7 +74,12 @@ export default function ServiceItem(props) {
                     </>
                 )}
             </div>
-            <div className='flex'>
+            <div className='flex items-center'>
+                <ServiceHealth
+                    kind={ServiceKind.AI}
+                    instanceKey={serviceInstanceKey}
+                    pluginList={pluginList}
+                />
                 <Button
                     isIconOnly size='sm' variant='light'
                     onPress={() => { setCurrentConfigKey(serviceInstanceKey); onConfigOpen(); }}

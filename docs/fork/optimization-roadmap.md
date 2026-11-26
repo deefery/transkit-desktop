@@ -187,6 +187,7 @@ flowchart LR
 | V0 | 已完成：release 构建实测，方法和结果见 [v0-performance-baseline.md](v0-performance-baseline.md)，脚本 `scripts/fork/perf-baseline.mjs` 可重复执行。空闲时 4 个页面常驻（daemon、Live Interpreter、Voice Anywhere 及字幕窗），每个窗口都加载同一个 3.3 MB 的 JS 包；冷启动未测 | 直接合并 |
 | P1 | 已完成：各窗口按需加载代码；无云构建不再打包 Supabase；翻译窗只在截图翻译时加载 OCR。翻译窗的 JS 从 3322 KB 降到 1545 KB，字幕窗和截图窗降到约 480 KB。同一会话与 V0 对比：首次弹窗 816 → 669 ms，空闲私有内存 323 → 287 MB。界面语言按需加载未做。详见 [v0-performance-baseline.md](v0-performance-baseline.md) 第 8 节 | 直接合并 |
 | P2 | 已完成：Live Interpreter、Voice Anywhere 及字幕窗改为第一次用到时创建，启动时只剩 daemon 页面（"始终显示"开启时仍启动即创建按钮）。同一会话与 P1 对比：空闲私有内存 292 → 134 MB，进程 10 → 7，启动 1044 → 548 ms；首次弹窗慢约 50 ms（范围重叠）。真实快捷键验收通过；录音只由快捷键触发，设置里打开"始终显示"不再自动开始录音。详见 [v0-performance-baseline.md](v0-performance-baseline.md) 第 9 节 | 直接合并 |
+| H1 | 已完成：设置 → 服务 的翻译、TTS、AI 列表里，每个服务旁显示最近一次结果（正常及延迟，或失败类型和 HTTP 状态码，以及时间），有"测试"按钮，每个列表有"全部测试"。测试走与实际使用相同的代码（翻译一句 Hello、合成一句语音、请求一个字的 AI 回复）；翻译窗实际使用时的失败和恢复也会记录（不支持的语言对除外）。只保存失败类型、状态码、延迟和时间，不保存错误文本。本机实测：Bing 失败（服务不可用）、Google 正常 1746 ms、Edge TTS 正常 1705 ms、Google TTS 正常 295 ms | 直接合并 |
 | 其他 | 未开始 | — |
 
 > U1、U2、A2 真实窗口检查时发现、留给 F1 的问题：本机网络下 Bing 每次都报 "Get Token Failed"，而划词窗口总是先显示第一个服务（Bing）；切换服务的按钮平时透明，悬停才出现；同一个错误在结果卡片和面板底部各显示一次。
