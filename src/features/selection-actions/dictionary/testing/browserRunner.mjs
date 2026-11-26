@@ -137,6 +137,9 @@ async function runUnlocked({
         configFile: false,
         logLevel: 'silent',
         appType: 'custom',
+        // One pre-bundle cache per test module. A shared cache holds whatever the previous test
+        // needed; Vite then re-bundles mid-run and the page's in-flight imports fail.
+        cacheDir: join(root, 'node_modules', '.vite-browser-tests', module.replace(/[^\w.-]+/g, '_')),
         plugins: stubTauri ? [tauriStubPlugin()] : [],
         server: { middlewareMode: true, hmr: false, watch: null, fs: { strict: false } },
         // The adapter's Config.jsx pulls CJS UI dependencies; let Vite pre-bundle them for the browser.
