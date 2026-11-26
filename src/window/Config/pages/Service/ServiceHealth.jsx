@@ -67,7 +67,7 @@ export default function ServiceHealth({ kind, instanceKey, pluginList }) {
     } else if (record) {
         const reason = t(`translate.fallback.reason.${record.kind}`, { defaultValue: record.kind });
         summary = [
-            `${t('config.service.health.failed')}: ${reason}${record.status ? ` (HTTP ${record.status})` : ''}`,
+            t('config.service.health.failed_reason', { reason: `${reason}${record.status ? ` (HTTP ${record.status})` : ''}` }),
             when,
         ]
             .filter(Boolean)

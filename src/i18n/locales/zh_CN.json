@@ -187,6 +187,29 @@
         "voice_anywhere": "随处语音",
         "audio_monitor": "实时口译"
       },
+      "welcome": {
+        "title": "欢迎",
+        "heading": "开始设置 TransKit",
+        "subtitle": "三步完成，之后都可以在设置里修改。",
+        "skip": "跳过",
+        "language_title": "语言",
+        "translate_into": "翻译成",
+        "service_title": "翻译服务",
+        "service_desc": "刚才在你的网络下检查了以下服务。排在第一的优先使用，失败时会自动换用下一个。",
+        "primary": "首选",
+        "recommended": "推荐",
+        "use_as_primary": "设为首选",
+        "shortcut_title": "试一次快捷键",
+        "shortcut_desc": "选中下面这句话，或其他应用里的任意文字，然后按 {{keys}}。",
+        "shortcut_missing": "还没有为划词翻译设置快捷键，请在快捷键设置里设置。",
+        "sample_sentence": "Translation tools work best when they stay out of your way.",
+        "waiting": "等待按下快捷键…",
+        "waiting_hint": "还没有反应？可能有其他应用占用了这个快捷键。",
+        "open_hotkeys": "打开快捷键设置",
+        "read_ok": "成功：读取了 {{count}} 个字符并已翻译。",
+        "read_empty": "快捷键有效，但没有读到文字。请重新选中文字，并在该应用位于最前面时按快捷键。有些应用（例如以管理员身份运行的应用）不允许读取。",
+        "finish": "完成"
+      },
       "service": {
         "label": "服务设置",
         "title": "服务设置",
@@ -200,6 +223,7 @@
           "untested": "尚未测试",
           "ok": "正常",
           "failed": "失败",
+          "failed_reason": "失败：{{reason}}",
           "test": "测试",
           "test_all": "全部测试",
           "source": {

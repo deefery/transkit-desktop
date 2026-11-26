@@ -152,6 +152,9 @@ fn main() {
             if is_first_run() {
                 // Open Config Window
                 info!("First Run, opening config window");
+                // First-run guide (O1): Settings opens on the Welcome page until it is finished or
+                // skipped. Only a true first run sets this, so existing users never see it.
+                config::set("onboarding_pending", true);
                 config_window();
             }
             app.manage(StringWrapper(Mutex::new("".to_string())));

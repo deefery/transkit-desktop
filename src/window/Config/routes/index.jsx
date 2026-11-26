@@ -13,6 +13,7 @@ import VoiceInput from '../pages/VoiceInput';
 import LocalSidecar from '../pages/LocalSidecar';
 import Profile from '../pages/Profile';
 import Account from '../pages/Account';
+import Welcome from '../pages/Welcome';
 
 const routes = [
     {
@@ -66,6 +67,10 @@ const routes = [
     {
         path: '/account',
         element: <Account />,
+    },
+    {
+        path: '/welcome',
+        element: <Welcome />,
     },
     {
         path: '/',

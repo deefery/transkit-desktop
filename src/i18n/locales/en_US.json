@@ -197,6 +197,29 @@
         "set_hotkey": "Press to Set Hotkey",
         "voice_anywhere": "Voice Anywhere"
       },
+      "welcome": {
+        "title": "Welcome",
+        "heading": "Let's set up TransKit",
+        "subtitle": "Three quick steps. You can change everything later in Settings.",
+        "skip": "Skip setup",
+        "language_title": "Languages",
+        "translate_into": "Translate into",
+        "service_title": "Translation service",
+        "service_desc": "These services were just checked on your network. The first one is used first; if it fails, TransKit switches to the next.",
+        "primary": "Primary",
+        "recommended": "Recommended",
+        "use_as_primary": "Use as primary",
+        "shortcut_title": "Try the shortcut",
+        "shortcut_desc": "Select the sentence below, or any text in another app, and press {{keys}}.",
+        "shortcut_missing": "No shortcut is set for selection translation yet. Set one in Hotkey settings.",
+        "sample_sentence": "Translation tools work best when they stay out of your way.",
+        "waiting": "Waiting for the shortcut…",
+        "waiting_hint": "Nothing yet? Another app may be using this shortcut.",
+        "open_hotkeys": "Open Hotkey settings",
+        "read_ok": "It works: {{count}} characters were read and translated.",
+        "read_empty": "The shortcut works, but no text could be read. Select the text again and press the shortcut while that app is in front. Some apps, for example ones running as administrator, do not allow reading.",
+        "finish": "Finish"
+      },
       "service": {
         "label": "Service",
         "title": "Service Settings",
@@ -271,6 +294,7 @@
           "untested": "Not tested yet",
           "ok": "OK",
           "failed": "Failed",
+          "failed_reason": "Failed: {{reason}}",
           "test": "Test",
           "test_all": "Test all",
           "source": {

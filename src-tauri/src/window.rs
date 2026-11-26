@@ -261,6 +261,11 @@ pub fn selection_translate() {
     let source_window = crate::write_back::foreground_window();
     // Get Selected Text
     let text = get_text();
+    // First-run guide (O1) checks that the shortcut works and text can be read: only the
+    // number of characters is sent, never the text.
+    if let Some(app) = APP.get() {
+        let _ = app.emit_all("selection_read", text.trim().chars().count());
+    }
     if text.trim().is_empty() {
         return;
     }

@@ -1,4 +1,4 @@
-import { useLocation, useRoutes } from 'react-router-dom';
+import { useLocation, useNavigate, useRoutes } from 'react-router-dom';
 import React, { useEffect, useState } from 'react';
 import { appWindow } from '@tauri-apps/api/window';
 import { checkUpdate } from '@tauri-apps/api/updater';
@@ -14,6 +14,7 @@ import SideBar from './components/SideBar';
 import { osType, appVersion } from '../../utils/env';
 import { useConfig } from '../../hooks';
 import routes from './routes';
+import { ONBOARDING_CONFIG_KEY, WELCOME_PATH, shouldShowWelcome } from './pages/Welcome/onboarding';
 import './style.css';
 
 // Compact theme toggle for the header
@@ -74,6 +75,12 @@ export default function Config() {
     const location = useLocation();
     const page = useRoutes(routes);
     const [updateAvailable, setUpdateAvailable] = useState(false);
+    // First-run guide (O1): open the Welcome page until it is finished or skipped.
+    const navigate = useNavigate();
+    const [onboardingPending] = useConfig(ONBOARDING_CONFIG_KEY, false);
+    useEffect(() => {
+        if (shouldShowWelcome(onboardingPending, location.pathname)) navigate(WELCOME_PATH);
+    }, [onboardingPending]);
 
     useEffect(() => {
         if (appWindow.label === 'config') {
