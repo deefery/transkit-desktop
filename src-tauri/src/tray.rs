@@ -259,17 +259,8 @@ fn on_check_update_click() {
     updater_window();
 }
 fn on_view_log_click(app: &AppHandle) {
-    use tauri::api::path::app_log_dir;
-    let log_path = match app_log_dir(&app.config()) {
-        Some(p) => p,
-        None => { warn!("[tray] could not resolve app log dir"); return; }
-    };
-    let path_str = match log_path.to_str() {
-        Some(s) => s,
-        None => { warn!("[tray] log path is not valid UTF-8"); return; }
-    };
-    if let Err(e) = tauri::api::shell::open(&app.shell_scope(), path_str, None) {
-        warn!("[tray] open log dir failed: {:?}", e);
+    if let Err(e) = crate::open_path::open_app_folder(app.clone(), "log".into()) {
+        warn!("[tray] open log dir failed: {}", e);
     }
 }
 fn on_restart_click(app: &AppHandle) {

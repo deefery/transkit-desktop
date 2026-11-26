@@ -1494,11 +1494,7 @@ export default function Monitor() {
 
     // ── Open transcripts folder ───────────────────────────────────────────────
     const handleOpenTranscriptFolder = useCallback(async () => {
-        try {
-            const docsDir = await documentDir();
-            const dir = await join(docsDir, 'TransKit');
-            await openPath(dir);
-        } catch (_) {}
+        await invoke('open_app_folder', { kind: 'transcripts' }).catch(() => {});
     }, []);
 
     // ── Save status label ─────────────────────────────────────────────────────
@@ -1890,17 +1886,13 @@ export default function Monitor() {
                             className='text-[10px] truncate text-left w-full hover:underline cursor-pointer'
                             style={{ color: '#9ca3af' }}
                             title={savedNotification.path}
-                            onClick={() => openPath(savedNotification.path).catch(() => {})}
+                            onClick={() => invoke('open_saved_file', { path: savedNotification.path, reveal: false }).catch(() => {})}
                         >
                             {savedNotification.path}
                         </button>
                     </div>
                     <button
-                        onClick={() => {
-                            const dir = savedNotification.path.substring(0, savedNotification.path.lastIndexOf('/') + 1) ||
-                                        savedNotification.path.substring(0, savedNotification.path.lastIndexOf('\\') + 1);
-                            openPath(dir || savedNotification.path).catch(() => {});
-                        }}
+                        onClick={() => invoke('open_saved_file', { path: savedNotification.path, reveal: true }).catch(() => {})}
                         className='flex-shrink-0 hover:opacity-70 transition-opacity'
                         style={{ color: '#9ca3af' }}
                         title={t('monitor.autosave_open_folder')}

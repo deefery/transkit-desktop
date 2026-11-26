@@ -14,17 +14,29 @@
     "allowlist": {
       "all": false,
       "shell": {
-        "all": true,
-        "open": ".*"
+        "open": "^(https?://|mailto:)[^\\s]+$"
       },
       "path": {
         "all": true
       },
       "window": {
-        "all": true
+        "center": true,
+        "close": true,
+        "hide": true,
+        "maximize": true,
+        "minimize": true,
+        "unmaximize": true,
+        "setAlwaysOnTop": true,
+        "setFocus": true,
+        "setPosition": true,
+        "setResizable": true,
+        "setSize": true,
+        "setSkipTaskbar": true,
+        "show": true,
+        "startDragging": true
       },
       "clipboard": {
-        "all": true
+        "writeText": true
       },
       "globalShortcut": {
         "all": true
@@ -33,7 +45,6 @@
         "all": true
       },
       "http": {
-        "all": true,
         "request": true,
         "scope": [
           "http://**",
@@ -46,16 +57,24 @@
       "protocol": {
         "asset": true,
         "assetScope": [
-          "$CACHE/**",
-          "$CONFIG/**"
+          "$APPCONFIG/plugins/**",
+          "$APPCACHE/**"
         ]
       },
       "fs": {
-        "all": true,
+        "readFile": true,
+        "writeFile": true,
+        "readDir": true,
+        "createDir": true,
+        "removeDir": true,
+        "exists": true,
         "scope": [
-          "$APPCONFIG/**",
+          "$APPCONFIG/plugins",
+          "$APPCONFIG/plugins/**",
+          "$APPCACHE",
           "$APPCACHE/**",
-          "$DOCUMENT/**"
+          "$DOCUMENT/TransKit",
+          "$DOCUMENT/TransKit/**"
         ]
       },
       "dialog": {

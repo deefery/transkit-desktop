@@ -1,5 +1,4 @@
 import { Card, CardBody, Button, Chip, Link, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, useDisclosure } from '@nextui-org/react';
-import { appLogDir, appConfigDir } from '@tauri-apps/api/path';
 import { useTranslation } from 'react-i18next';
 import { open } from '@tauri-apps/api/shell';
 import { invoke } from '@tauri-apps/api';
@@ -165,10 +164,7 @@ export default function About() {
                                 size='sm'
                                 variant='flat'
                                 startContent={<BsFileText />}
-                                onPress={async () => {
-                                    const dir = await appLogDir();
-                                    open(dir);
-                                }}
+                                onPress={() => invoke('open_app_folder', { kind: 'log' }).catch(() => {})}
                             >
                                 {t('config.about.view_log')}
                             </Button>
@@ -176,10 +172,7 @@ export default function About() {
                                 size='sm'
                                 variant='flat'
                                 startContent={<BsFolder />}
-                                onPress={async () => {
-                                    const dir = await appConfigDir();
-                                    open(dir);
-                                }}
+                                onPress={() => invoke('open_app_folder', { kind: 'config' }).catch(() => {})}
                             >
                                 {t('config.about.view_config')}
                             </Button>

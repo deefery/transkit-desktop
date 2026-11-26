@@ -15,6 +15,7 @@ mod hotkey;
 mod local_sidecar;
 mod narration;
 mod onnx_engine;
+mod open_path;
 mod screenshot;
 mod server;
 mod system_ocr;
@@ -331,6 +332,8 @@ fn main() {
             local_sidecar_download_model,
             local_sidecar_get_port,
             local_sidecar_reveal_cache,
+            open_path::open_app_folder,
+            open_path::open_saved_file,
             onnx_engine_check_setup,
             onnx_engine_install,
             onnx_engine_start,
