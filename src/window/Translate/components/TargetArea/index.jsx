@@ -36,6 +36,7 @@ import { sourceLanguageAtom, targetLanguageAtom } from '../LanguageArea';
 import { useConfig, useToastStyle, useVoice } from '../../../../hooks';
 import { sourceTextAtom, detectLanguageAtom, windowTypeAtom } from '../SourceArea';
 import { invoke_plugin } from '../../../../utils/invoke_plugin';
+import { safeHtmlToReact } from '../../../../utils/safe_html';
 import * as builtinServices from '../../../../services/translate';
 import * as builtinTtsServices from '../../../../services/tts';
 import { resolveActiveTtsInstanceKey, synthesizeSpeech } from '../../../../utils/tts_service';
@@ -856,10 +857,9 @@ export default function TargetArea(props) {
                                                         <span
                                                             className='select-text'
                                                             style={{ fontSize: `${appFontSize}px` }}
-                                                            dangerouslySetInnerHTML={{
-                                                                __html: sentence['source'],
-                                                            }}
-                                                        />
+                                                        >
+                                                            {safeHtmlToReact(sentence['source'])}
+                                                        </span>
                                                     )}
                                                 </>
                                                 <>
@@ -867,10 +867,9 @@ export default function TargetArea(props) {
                                                         <div
                                                             className='select-text text-default-500'
                                                             style={{ fontSize: `${appFontSize}px` }}
-                                                            dangerouslySetInnerHTML={{
-                                                                __html: sentence['target'],
-                                                            }}
-                                                        />
+                                                        >
+                                                            {safeHtmlToReact(sentence['target'])}
+                                                        </div>
                                                     )}
                                                 </>
                                             </div>
