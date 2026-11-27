@@ -1,6 +1,7 @@
 import { Language } from './info';
 import * as jose from 'jose';
 import { info } from 'tauri-plugin-log-api';
+import { streamFetch } from '../../../utils/stream_fetch';
 
 export async function translate(text, from, to, options = {}) {
     const { config, setResult, detect } = options;
@@ -46,7 +47,7 @@ export async function translate(text, from, to, options = {}) {
 
     let result = '';
     try {
-        const response = await fetch('https://open.bigmodel.cn/api/paas/v4/chat/completions', {
+        const response = await streamFetch('https://open.bigmodel.cn/api/paas/v4/chat/completions', {
             method: 'POST',
             headers: headers,
             body: JSON.stringify(body),

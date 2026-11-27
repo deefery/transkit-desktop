@@ -12,6 +12,7 @@ mod config;
 mod edge_tts;
 mod error;
 mod hotkey;
+mod http_stream;
 mod local_sidecar;
 mod narration;
 mod onnx_engine;
@@ -333,6 +334,8 @@ fn main() {
             local_sidecar_get_port,
             local_sidecar_reveal_cache,
             open_path::open_app_folder,
+            http_stream::http_stream,
+            http_stream::http_stream_cancel,
             open_path::open_saved_file,
             onnx_engine_check_setup,
             onnx_engine_install,

@@ -39,10 +39,6 @@ function buildWav(pcmChunks) {
     return wav;
 }
 
-function blobFromWav(pcmChunks) {
-    return new Blob([buildWav(pcmChunks)], { type: 'audio/wav' });
-}
-
 function getAsyncStrategy(serviceName) {
     switch (serviceName) {
         case 'openai_whisper_stt':
@@ -65,6 +61,21 @@ function getAsyncStrategy(serviceName) {
     }
 }
 
+function throwIfAborted(signal) {
+    if (signal?.aborted) throw new DOMException('The operation was aborted.', 'AbortError');
+}
+
+// Requests go through Tauri's HTTP client rather than the WebView's fetch, so custom base URLs
+// work whatever CORS headers the server sends. Tauri v1 requests cannot be aborted: an aborted
+// signal discards the response instead.
+async function nativeRequest(url, { method = 'GET', headers, body, signal, timeout = 60 } = {}) {
+    throwIfAborted(signal);
+    const res = await tauriFetch(url, { method, headers, body, responseType: ResponseType.Text, timeout });
+    throwIfAborted(signal);
+    const text = typeof res.data === 'string' ? res.data : '';
+    return { ok: res.ok, status: res.status, text: async () => text };
+}
+
 async function parseJsonResponse(response) {
     const text = await response.text();
     if (!text) return {};
@@ -82,14 +93,13 @@ async function transcribeWithOpenAIWhisper(config, pcmChunks, signal) {
     }
 
     const baseUrl = (serverUrl ?? OPENAI_DEFAULT_BASE_URL).replace(/\/+$/, '');
-    const form = new FormData();
-    form.append('file', new File([blobFromWav(pcmChunks)], 'voice-anywhere.wav', { type: 'audio/wav' }));
-    form.append('model', model ?? 'whisper-1');
-
-    const response = await fetch(`${baseUrl}/v1/audio/transcriptions`, {
+    const response = await nativeRequest(`${baseUrl}/v1/audio/transcriptions`, {
         method: 'POST',
         headers: apiKey ? { Authorization: `Bearer ${apiKey}` } : undefined,
-        body: form,
+        body: Body.form({
+            file: { file: buildWav(pcmChunks), mime: 'audio/wav', fileName: 'voice-anywhere.wav' },
+            model: model ?? 'whisper-1',
+        }),
         signal,
     });
 
@@ -194,13 +204,13 @@ async function transcribeWithAssemblyAI(config, pcmChunks, signal) {
         throw new Error('API key is required. Please add it in Settings.');
     }
 
-    const uploadResponse = await fetch(`${ASSEMBLYAI_BASE_URL}/v2/upload`, {
+    const uploadResponse = await nativeRequest(`${ASSEMBLYAI_BASE_URL}/v2/upload`, {
         method: 'POST',
         headers: {
             Authorization: apiKey,
             'Content-Type': 'application/octet-stream',
         },
-        body: blobFromWav(pcmChunks),
+        body: Body.bytes(buildWav(pcmChunks)),
         signal,
     });
 
@@ -217,13 +227,13 @@ async function transcribeWithAssemblyAI(config, pcmChunks, signal) {
         transcriptBody.language_code = sourceLanguage;
     }
 
-    const transcriptResponse = await fetch(`${ASSEMBLYAI_BASE_URL}/v2/transcript`, {
+    const transcriptResponse = await nativeRequest(`${ASSEMBLYAI_BASE_URL}/v2/transcript`, {
         method: 'POST',
         headers: {
             Authorization: apiKey,
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify(transcriptBody),
+        body: Body.json(transcriptBody),
         signal,
     });
 
@@ -235,9 +245,10 @@ async function transcribeWithAssemblyAI(config, pcmChunks, signal) {
     const pollSignal = signal;
     while (!pollSignal?.aborted) {
         await new Promise((resolve) => setTimeout(resolve, 1500));
-        const statusResponse = await fetch(`${ASSEMBLYAI_BASE_URL}/v2/transcript/${transcriptData.id}`, {
+        const statusResponse = await nativeRequest(`${ASSEMBLYAI_BASE_URL}/v2/transcript/${transcriptData.id}`, {
             headers: { Authorization: apiKey },
             signal: pollSignal,
+            timeout: 30,
         });
         const statusData = await parseJsonResponse(statusResponse);
 

@@ -1,5 +1,6 @@
 import { Language } from './info';
 import { Ollama } from 'ollama/browser';
+import { streamFetch } from '../../../utils/stream_fetch';
 
 export async function translate(text, from, to, options = {}) {
     const { config, setResult, detect } = options;
@@ -12,7 +13,7 @@ export async function translate(text, from, to, options = {}) {
     if (requestPath.endsWith('/')) {
         requestPath = requestPath.slice(0, -1);
     }
-    const ollama = new Ollama({ host: requestPath });
+    const ollama = new Ollama({ host: requestPath, fetch: streamFetch });
 
     promptList = promptList.map((item) => {
         return {

@@ -11,6 +11,7 @@ import { useConfig } from '../../../hooks/useConfig';
 import { useToastStyle } from '../../../hooks';
 import { translate } from './index';
 import { Language } from './index';
+import { streamFetch } from '../../../utils/stream_fetch';
 
 export function Config(props) {
     const { instanceKey, updateServiceList, onClose } = props;
@@ -43,7 +44,7 @@ export function Config(props) {
 
     async function getModles() {
         try {
-            const ollama = new Ollama({ host: serviceConfig.requestPath });
+            const ollama = new Ollama({ host: serviceConfig.requestPath, fetch: streamFetch });
             const list = await ollama.list();
             setInstalledModels(list);
         } catch {
@@ -53,7 +54,7 @@ export function Config(props) {
 
     async function pullModel() {
         setIsPulling(true);
-        const ollama = new Ollama({ host: serviceConfig.requestPath });
+        const ollama = new Ollama({ host: serviceConfig.requestPath, fetch: streamFetch });
         const stream = await ollama.pull({ model: serviceConfig.model, stream: true });
         for await (const part of stream) {
             if (part.digest) {
