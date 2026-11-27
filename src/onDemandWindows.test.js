@@ -19,7 +19,7 @@ describe('windows created on demand', () => {
     });
 
     test('on_demand.rs builds the three windows with their former properties', () => {
-        for (const prop of ['.transparent(true)', '.decorations(false)', '.always_on_top(true)', '.skip_taskbar(true)', '.visible(false)', '.focused(false)', '.additional_browser_args("--disable-web-security")']) {
+        for (const prop of ['.transparent(true)', '.decorations(false)', '.always_on_top(true)', '.skip_taskbar(true)', '.visible(false)', '.focused(false)']) {
             assert.ok(onDemand.includes(prop), prop);
         }
         assert.match(onDemand, /MONITOR => builder\s+\.title\("Live Interpreter"\)\s+\.inner_size\(720\.0, 400\.0\)\s+\.min_inner_size\(400\.0, 60\.0\)/);

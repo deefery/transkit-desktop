@@ -25,8 +25,7 @@ pub fn window(label: &str) -> Option<(Window, bool)> {
         .always_on_top(true)
         .skip_taskbar(true)
         .visible(false)
-        .focused(false)
-        .additional_browser_args("--disable-web-security");
+        .focused(false);
     let builder = match label {
         MONITOR => builder
             .title("Live Interpreter")

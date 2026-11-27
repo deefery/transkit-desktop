@@ -62,6 +62,22 @@ describe('Tauri allowlist', () => {
         for (const op of ['removeFile', 'renameFile', 'copyFile']) assert.equal(allowlist.fs[op], undefined, op);
     });
 
+    test('no window turns off WebView web security', () => {
+        // Every WebView sharing a profile must use the same browser arguments, so this is all or none.
+        for (const window of config.tauri.windows) assert.equal(window.additionalBrowserArgs, undefined, window.label);
+        const rustDir = join(root, 'src-tauri/src');
+        const rustFiles = (function walk(dir) {
+            return readdirSync(dir).flatMap((name) => {
+                const path = join(dir, name);
+                return statSync(path).isDirectory() ? walk(path) : name.endsWith('.rs') ? [path] : [];
+            });
+        })(rustDir);
+        for (const file of rustFiles) {
+            const text = readFileSync(file, 'utf8');
+            assert.ok(!/disable-web-security|additional_browser_args/.test(text), file);
+        }
+    });
+
     test('the front end opens local folders and files through the native commands', () => {
         // Local paths would be rejected by the shell regex; they go through open_app_folder / open_saved_file.
         const offenders = [];

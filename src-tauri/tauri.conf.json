@@ -135,8 +135,7 @@
         "decorations": false,
         "transparent": true,
         "visible": false,
-        "url": "daemon.html",
-        "additionalBrowserArgs": "--disable-web-security"
+        "url": "daemon.html"
       }
     ],
     "systemTray": {

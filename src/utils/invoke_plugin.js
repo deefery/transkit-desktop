@@ -32,5 +32,13 @@ export async function invoke_plugin(pluginType, pluginName) {
         pluginDir, // String
         osType,// "Windows_NT", "Darwin", "Linux"
     }
-    return [eval(`${script} ${pluginType}`), utils];
+    // In release builds a plugin's bare `fetch` / `Body` resolve to Tauri's HTTP API, because the
+    // bundle chunk holding this function imports them, so such plugins do not use the WebView
+    // fetch. Pin that explicitly instead of relying on how the bundle is split. The plugin runs in
+    // an inner function, so its own top-level `const fetch = ...` still works.
+    const scoped = eval(`((fetch, Body) => (function () {
+${script}
+;return ${pluginType};
+})())`);
+    return [scoped(http.fetch, http.Body), utils];
 }

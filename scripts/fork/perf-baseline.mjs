@@ -187,7 +187,7 @@ async function oneRun(run) {
     if (await portOpen()) throw new Error(`port ${PORT} is already in use: another instance is running`);
     const t0 = now();
     const child = spawn(EXE, [], {
-        env: { ...process.env, WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--disable-web-security --remote-debugging-port=${CDP}` },
+        env: { ...process.env, WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${CDP}` },
         stdio: 'ignore',
         detached: false,
     });
